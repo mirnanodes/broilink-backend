@@ -35,44 +35,40 @@ class ManualAnalysisAggregateService
 
     /**
      * -------- 1 DAY (6 buckets, 4h each) --------
+     * ✅ FIXED: Query manual_data instead of iot_data
      */
     private function aggregateOneDay(int $farmId, Carbon $date): array
     {
         $start = $date->copy()->startOfDay();
         $end   = $date->copy()->endOfDay();
 
-        $results = DB::table('iot_data')
+        // ✅ FIX: Query manual_data table for peternak work data
+        $result = DB::table('manual_data')
             ->selectRaw('
-                FLOOR(HOUR(`timestamp`) / 4) AS bucket,
-                ROUND(AVG(temperature), 0) AS avg_temp,
-                ROUND(AVG(humidity), 0) AS avg_humidity,
-                ROUND(AVG(ammonia), 0) AS avg_ammonia
+                SUM(konsumsi_pakan) AS total_feed,
+                SUM(konsumsi_air) AS total_water,
+                AVG(rata_rata_bobot) AS avg_weight,
+                SUM(jumlah_kematian) AS total_mortality
             ')
             ->where('farm_id', $farmId)
-            ->whereBetween('timestamp', [$start, $end])
-            ->groupBy('bucket')
-            ->orderBy('bucket')
-            ->get()
-            ->keyBy('bucket');
+            ->where('report_date', $date->toDateString())
+            ->first();
 
-        $labels       = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-        $temperature  = [];
-        $humidity     = [];
-        $ammonia      = [];
+        // For 1 day view, show hourly breakdown (6 buckets of 4h each)
+        // Since manual_data is daily, we replicate the same values across all buckets
+        $labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
 
-        for ($i = 0; $i < 6; $i++) {
-            $row = $results[$i] ?? null;
-
-            $temperature[] = $row?->avg_temp !== null ? (int) $row->avg_temp : null;
-            $humidity[]    = $row?->avg_humidity !== null ? (int) $row->avg_humidity : null;
-            $ammonia[]     = $row?->avg_ammonia !== null ? (int) $row->avg_ammonia : null;
-        }
+        $feedValue = $result?->total_feed ? round($result->total_feed, 2) : null;
+        $waterValue = $result?->total_water ? round($result->total_water, 2) : null;
+        $weightValue = $result?->avg_weight ? round($result->avg_weight, 2) : null;
+        $mortalityValue = $result?->total_mortality ? (int)$result->total_mortality : null;
 
         return $this->withOverview($farmId, [
             'labels'       => $labels,
-            'temperature'  => $temperature,
-            'humidity'     => $humidity,
-            'ammonia'      => $ammonia,
+            'feed'         => array_fill(0, 6, $feedValue),
+            'water'        => array_fill(0, 6, $waterValue),
+            'avg_weight'   => array_fill(0, 6, $weightValue),
+            'mortality'    => array_fill(0, 6, $mortalityValue),
             'meta' => [
                 'range'   => '1_day',
                 'farm_id' => $farmId,
@@ -84,48 +80,54 @@ class ManualAnalysisAggregateService
 
     /**
      * -------- 1 WEEK (7 days) --------
+     * ✅ FIXED: Query manual_data instead of iot_data
      */
     private function aggregateOneWeek(int $farmId, Carbon $date): array
     {
         $end   = $date->copy()->endOfDay();
         $start = $date->copy()->subDays(6)->startOfDay();
 
-        $results = DB::table('iot_data')
+        // ✅ FIX: Query manual_data table
+        $results = DB::table('manual_data')
             ->selectRaw('
-                DATE(`timestamp`) AS date,
-                ROUND(AVG(temperature), 0) AS avg_temp,
-                ROUND(AVG(humidity), 0) AS avg_humidity,
-                ROUND(AVG(ammonia), 0) AS avg_ammonia
+                report_date AS date,
+                SUM(konsumsi_pakan) AS total_feed,
+                SUM(konsumsi_air) AS total_water,
+                AVG(rata_rata_bobot) AS avg_weight,
+                SUM(jumlah_kematian) AS total_mortality
             ')
             ->where('farm_id', $farmId)
-            ->whereBetween('timestamp', [$start, $end])
-            ->groupBy('date')
-            ->orderBy('date')
+            ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('report_date')
+            ->orderBy('report_date')
             ->get()
             ->keyBy('date');
 
-        $labels      = [];
-        $temperature = [];
-        $humidity    = [];
-        $ammonia     = [];
+        $labels    = [];
+        $feed      = [];
+        $water     = [];
+        $avgWeight = [];
+        $mortality = [];
 
         $current = $start->copy();
         for ($i = 0; $i < 7; $i++) {
             $key = $current->toDateString();
 
-            $labels[]      = MonitoringLabelHelper::weekdayNameId($current);
-            $temperature[] = $results[$key]->avg_temp    ?? null;
-            $humidity[]    = $results[$key]->avg_humidity?? null;
-            $ammonia[]     = $results[$key]->avg_ammonia ?? null;
+            $labels[]    = MonitoringLabelHelper::weekdayNameId($current);
+            $feed[]      = isset($results[$key]) ? round($results[$key]->total_feed, 2) : null;
+            $water[]     = isset($results[$key]) ? round($results[$key]->total_water, 2) : null;
+            $avgWeight[] = isset($results[$key]) ? round($results[$key]->avg_weight, 2) : null;
+            $mortality[] = isset($results[$key]) ? (int)$results[$key]->total_mortality : null;
 
             $current->addDay();
         }
 
         return $this->withOverview($farmId, [
             'labels'       => $labels,
-            'temperature'  => $temperature,
-            'humidity'     => $humidity,
-            'ammonia'      => $ammonia,
+            'feed'         => $feed,
+            'water'        => $water,
+            'avg_weight'   => $avgWeight,
+            'mortality'    => $mortality,
             'meta' => [
                 'range'   => '1_week',
                 'farm_id' => $farmId,
@@ -137,42 +139,48 @@ class ManualAnalysisAggregateService
 
     /**
      * -------- 1 MONTH (4 weeks) --------
+     * ✅ FIXED: Query manual_data instead of iot_data
      */
     private function aggregateOneMonth(int $farmId, Carbon $date): array
     {
         $start = $date->copy()->startOfMonth();
         $end   = $date->copy()->endOfMonth();
 
-        $results = DB::table('iot_data')
+        // ✅ FIX: Query manual_data table
+        $results = DB::table('manual_data')
             ->selectRaw('
-                FLOOR((DAY(`timestamp`) - 1) / 7) + 1 AS week_of_month,
-                ROUND(AVG(temperature), 0) AS avg_temp,
-                ROUND(AVG(humidity), 0) AS avg_humidity,
-                ROUND(AVG(ammonia), 0) AS avg_ammonia
+                FLOOR((DAY(report_date) - 1) / 7) + 1 AS week_of_month,
+                SUM(konsumsi_pakan) AS total_feed,
+                SUM(konsumsi_air) AS total_water,
+                AVG(rata_rata_bobot) AS avg_weight,
+                SUM(jumlah_kematian) AS total_mortality
             ')
             ->where('farm_id', $farmId)
-            ->whereBetween('timestamp', [$start, $end])
+            ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
             ->groupBy('week_of_month')
             ->orderBy('week_of_month')
             ->get()
             ->keyBy('week_of_month');
 
-        $labels      = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'];
-        $temperature = [];
-        $humidity    = [];
-        $ammonia     = [];
+        $labels    = ['Minggu 1', 'Minggu 2', 'Minggu 3', 'Minggu 4'];
+        $feed      = [];
+        $water     = [];
+        $avgWeight = [];
+        $mortality = [];
 
         for ($i = 1; $i <= 4; $i++) {
-            $temperature[] = $results[$i]->avg_temp    ?? null;
-            $humidity[]    = $results[$i]->avg_humidity?? null;
-            $ammonia[]     = $results[$i]->avg_ammonia ?? null;
+            $feed[]      = isset($results[$i]) ? round($results[$i]->total_feed, 2) : null;
+            $water[]     = isset($results[$i]) ? round($results[$i]->total_water, 2) : null;
+            $avgWeight[] = isset($results[$i]) ? round($results[$i]->avg_weight, 2) : null;
+            $mortality[] = isset($results[$i]) ? (int)$results[$i]->total_mortality : null;
         }
 
         return $this->withOverview($farmId, [
             'labels'       => $labels,
-            'temperature'  => $temperature,
-            'humidity'     => $humidity,
-            'ammonia'      => $ammonia,
+            'feed'         => $feed,
+            'water'        => $water,
+            'avg_weight'   => $avgWeight,
+            'mortality'    => $mortality,
             'meta' => [
                 'range'   => '1_month',
                 'farm_id' => $farmId,
@@ -184,50 +192,56 @@ class ManualAnalysisAggregateService
 
     /**
      * -------- 6 MONTHS (calendar months) --------
+     * ✅ FIXED: Query manual_data instead of iot_data
      */
     private function aggregateSixMonths(int $farmId, Carbon $date): array
     {
         $end   = $date->copy()->endOfMonth();
         $start = $date->copy()->subMonths(5)->startOfMonth();
 
-        $results = DB::table('iot_data')
+        // ✅ FIX: Query manual_data table
+        $results = DB::table('manual_data')
             ->selectRaw('
-                YEAR(`timestamp`) AS year,
-                MONTH(`timestamp`) AS month,
-                ROUND(AVG(temperature), 0) AS avg_temp,
-                ROUND(AVG(humidity), 0) AS avg_humidity,
-                ROUND(AVG(ammonia), 0) AS avg_ammonia
+                YEAR(report_date) AS year,
+                MONTH(report_date) AS month,
+                SUM(konsumsi_pakan) AS total_feed,
+                SUM(konsumsi_air) AS total_water,
+                AVG(rata_rata_bobot) AS avg_weight,
+                SUM(jumlah_kematian) AS total_mortality
             ')
             ->where('farm_id', $farmId)
-            ->whereBetween('timestamp', [$start, $end])
+            ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
             ->get()
             ->keyBy(fn ($r) => "{$r->year}-{$r->month}");
 
-        $labels      = [];
-        $temperature = [];
-        $humidity    = [];
-        $ammonia     = [];
+        $labels    = [];
+        $feed      = [];
+        $water     = [];
+        $avgWeight = [];
+        $mortality = [];
 
         $current = $start->copy();
         for ($i = 0; $i < 6; $i++) {
             $key = "{$current->year}-{$current->month}";
 
-            $labels[]      = MonitoringLabelHelper::monthAbbrevId($current->month);
-            $temperature[] = $results[$key]->avg_temp    ?? null;
-            $humidity[]    = $results[$key]->avg_humidity?? null;
-            $ammonia[]     = $results[$key]->avg_ammonia ?? null;
+            $labels[]    = MonitoringLabelHelper::monthAbbrevId($current->month);
+            $feed[]      = isset($results[$key]) ? round($results[$key]->total_feed, 2) : null;
+            $water[]     = isset($results[$key]) ? round($results[$key]->total_water, 2) : null;
+            $avgWeight[] = isset($results[$key]) ? round($results[$key]->avg_weight, 2) : null;
+            $mortality[] = isset($results[$key]) ? (int)$results[$key]->total_mortality : null;
 
             $current->addMonth();
         }
 
         return $this->withOverview($farmId, [
             'labels'       => $labels,
-            'temperature'  => $temperature,
-            'humidity'     => $humidity,
-            'ammonia'      => $ammonia,
+            'feed'         => $feed,
+            'water'        => $water,
+            'avg_weight'   => $avgWeight,
+            'mortality'    => $mortality,
             'meta' => [
                 'range'   => '6_months',
                 'farm_id' => $farmId,
@@ -242,8 +256,8 @@ class ManualAnalysisAggregateService
      */
     private function withOverview(int $farmId, array $payload): array
     {
-        $latest = DB::table('iot_data')
-            ->where('farm_id', $farmId)
+        // ✅ FIX: Use IotData model instead of DB::table to avoid type mismatch
+        $latest = \App\Models\IotData::where('farm_id', $farmId)
             ->latest('timestamp')
             ->first();
 
