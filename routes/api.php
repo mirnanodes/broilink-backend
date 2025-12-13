@@ -42,8 +42,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/owners', [AdminController::class, 'getOwners']);
         Route::get('/owners/{owner_id}/farms', [AdminController::class, 'getFarmsByOwner']);
         Route::get('/peternaks/{owner_id}', [AdminController::class, 'getPeternaks']);
-        Route::post('/broadcast', [AdminController::class, 'broadcastToOwners']);
-        Route::post('/farms/{id}/alert', [AdminController::class, 'sendFarmAlert']);
     });
 
     // OWNER ROUTES

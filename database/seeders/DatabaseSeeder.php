@@ -17,7 +17,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create Roles
+        // ==========================================
+        // 1. CREATE ROLES
+        // ==========================================
+        $this->command->info('Creating roles...');
+
         $adminRole = Role::create([
             'name' => 'Admin',
             'description' => 'System Administrator'
@@ -33,7 +37,11 @@ class DatabaseSeeder extends Seeder
             'description' => 'Farm Worker'
         ]);
 
-        // Create Admin
+        // ==========================================
+        // 2. CREATE ADMIN
+        // ==========================================
+        $this->command->info('Creating admin user...');
+
         $admin = User::create([
             'role_id' => $adminRole->role_id,
             'username' => 'admin',
@@ -42,48 +50,60 @@ class DatabaseSeeder extends Seeder
             'name' => 'System Administrator',
             'phone_number' => '081234567890',
             'status' => 'active',
-            'date_joined' => now()->subMonths(7),
+            'date_joined' => now()->subMonths(12),
             'last_login' => now()
         ]);
 
-        // Create 3 Owners
+        // ==========================================
+        // 3. CREATE OWNERS (3 owners, different scenarios)
+        // ==========================================
+        $this->command->info('Creating owners...');
+
+        // OWNER 1: Budi Santoso - 1 FARM (Simple scenario)
         $budi = User::create([
             'role_id' => $ownerRole->role_id,
             'username' => 'budi.santoso',
             'email' => 'budi.santoso@broilink.com',
             'password' => Hash::make('password'),
             'name' => 'Budi Santoso',
-            'phone_number' => '123456789',
+            'phone_number' => '081298765001',
             'status' => 'active',
-            'date_joined' => now()->subMonths(7),
+            'date_joined' => now()->subMonths(10),
             'last_login' => now()->subDays(1)
         ]);
 
+        // OWNER 2: Siti Nurhaliza - 2 FARMS (Multi-farm scenario)
         $siti = User::create([
             'role_id' => $ownerRole->role_id,
-            'username' => 'siti.rahayu',
-            'email' => 'siti.rahayu@broilink.com',
+            'username' => 'siti.nurhaliza',
+            'email' => 'siti.nurhaliza@broilink.com',
             'password' => Hash::make('password'),
-            'name' => 'Siti Rahayu',
-            'phone_number' => '234567890',
+            'name' => 'Siti Nurhaliza',
+            'phone_number' => '081298765002',
             'status' => 'active',
-            'date_joined' => now()->subMonths(6),
+            'date_joined' => now()->subMonths(9),
+            'last_login' => now()->subHours(3)
+        ]);
+
+        // OWNER 3: Bambang Setiawan - 3 FARMS (Large operation scenario)
+        $bambangOwner = User::create([
+            'role_id' => $ownerRole->role_id,
+            'username' => 'bambang.setiawan',
+            'email' => 'bambang.setiawan@broilink.com',
+            'password' => Hash::make('password'),
+            'name' => 'Bambang Setiawan',
+            'phone_number' => '081298765003',
+            'status' => 'active',
+            'date_joined' => now()->subMonths(11),
             'last_login' => now()->subDays(2)
         ]);
 
-        $agus = User::create([
-            'role_id' => $ownerRole->role_id,
-            'username' => 'agus.wijaya',
-            'email' => 'agus.wijaya@broilink.com',
-            'password' => Hash::make('password'),
-            'name' => 'Agus Wijaya',
-            'phone_number' => '345678901',
-            'status' => 'active',
-            'date_joined' => now()->subMonths(6),
-            'last_login' => now()->subDays(3)
-        ]);
+        // ==========================================
+        // 4. CREATE PETERNAKS (7 peternaks)
+        // ==========================================
+        $this->command->info('Creating peternaks...');
 
-        // Create 3 Peternaks (one for each farm)
+        // Peternak 1: Ahmad Fauzi (for Budi's farm)
         $ahmad = User::create([
             'role_id' => $peternakRole->role_id,
             'username' => 'ahmad.fauzi',
@@ -92,154 +112,217 @@ class DatabaseSeeder extends Seeder
             'name' => 'Ahmad Fauzi',
             'phone_number' => '081234567801',
             'status' => 'active',
-            'date_joined' => now()->subMonths(7),
-            'last_login' => now()
+            'date_joined' => now()->subMonths(10),
+            'last_login' => now()->subHours(1)
         ]);
 
-        $sri = User::create([
+        // Peternak 2: Eko Prasetyo (for Siti's farm 1)
+        $eko = User::create([
             'role_id' => $peternakRole->role_id,
-            'username' => 'sri.wahyuni',
-            'email' => 'sri.wahyuni@broilink.com',
+            'username' => 'eko.prasetyo',
+            'email' => 'eko.prasetyo@broilink.com',
             'password' => Hash::make('password'),
-            'name' => 'Sri Wahyuni',
+            'name' => 'Eko Prasetyo',
             'phone_number' => '081234567802',
             'status' => 'active',
-            'date_joined' => now()->subMonths(6),
+            'date_joined' => now()->subMonths(9),
             'last_login' => now()->subHours(2)
         ]);
 
-        $bambang = User::create([
+        // Peternak 3: Dian Wulandari (for Siti's farm 2)
+        $dian = User::create([
             'role_id' => $peternakRole->role_id,
-            'username' => 'bambang.sutrisno',
-            'email' => 'bambang.sutrisno@broilink.com',
+            'username' => 'dian.wulandari',
+            'email' => 'dian.wulandari@broilink.com',
             'password' => Hash::make('password'),
-            'name' => 'Bambang Sutrisno',
+            'name' => 'Dian Wulandari',
             'phone_number' => '081234567803',
             'status' => 'active',
-            'date_joined' => now()->subMonths(6),
+            'date_joined' => now()->subMonths(9),
+            'last_login' => now()->subHours(4)
+        ]);
+
+        // Peternak 4: Wahyu Nugroho (for Bambang's farm 1)
+        $wahyu = User::create([
+            'role_id' => $peternakRole->role_id,
+            'username' => 'wahyu.nugroho',
+            'email' => 'wahyu.nugroho@broilink.com',
+            'password' => Hash::make('password'),
+            'name' => 'Wahyu Nugroho',
+            'phone_number' => '081234567804',
+            'status' => 'active',
+            'date_joined' => now()->subMonths(11),
             'last_login' => now()->subHours(5)
         ]);
 
-        // Create 3 Farms
+        // Peternak 5: Sri Mulyani (for Bambang's farm 2)
+        $sri = User::create([
+            'role_id' => $peternakRole->role_id,
+            'username' => 'sri.mulyani',
+            'email' => 'sri.mulyani@broilink.com',
+            'password' => Hash::make('password'),
+            'name' => 'Sri Mulyani',
+            'phone_number' => '081234567805',
+            'status' => 'active',
+            'date_joined' => now()->subMonths(11),
+            'last_login' => now()->subHours(6)
+        ]);
+
+        // Peternak 6: Fitri Handayani (for Bambang's farm 3)
+        $fitri = User::create([
+            'role_id' => $peternakRole->role_id,
+            'username' => 'fitri.handayani',
+            'email' => 'fitri.handayani@broilink.com',
+            'password' => Hash::make('password'),
+            'name' => 'Fitri Handayani',
+            'phone_number' => '081234567806',
+            'status' => 'active',
+            'date_joined' => now()->subMonths(11),
+            'last_login' => now()->subHours(8)
+        ]);
+
+        // Peternak 7: Rizky Ramadhan (UNASSIGNED - for testing)
+        $rizky = User::create([
+            'role_id' => $peternakRole->role_id,
+            'username' => 'rizky.ramadhan',
+            'email' => 'rizky.ramadhan@broilink.com',
+            'password' => Hash::make('password'),
+            'name' => 'Rizky Ramadhan',
+            'phone_number' => '081234567807',
+            'status' => 'active',
+            'date_joined' => now()->subDays(15),
+            'last_login' => now()->subDays(2)
+        ]);
+
+        // ==========================================
+        // 5. CREATE FARMS (6 farms total)
+        // ==========================================
+        $this->command->info('Creating farms...');
+
+        // BUDI's FARM (1 farm)
         $farm1 = Farm::create([
             'owner_id' => $budi->user_id,
             'peternak_id' => $ahmad->user_id,
-            'farm_name' => 'Kandang Ayam Sleman - Tridadi',
-            'location' => 'Sleman - Tridadi',
+            'farm_name' => 'Kandang Sleman Utara',
+            'location' => 'Jl. Kaliurang Km 12, Sleman, Yogyakarta',
             'initial_population' => 5000,
             'initial_weight' => 0.045,
             'farm_area' => 1000,
-            'created_at' => now()->subMonths(7),
+            'created_at' => now()->subMonths(10),
             'updated_at' => now()
         ]);
 
+        // SITI's FARMS (2 farms)
         $farm2 = Farm::create([
             'owner_id' => $siti->user_id,
-            'peternak_id' => $sri->user_id,
-            'farm_name' => 'Kandang Ayam Bantul - Pandak',
-            'location' => 'Bantul - Pandak',
-            'initial_population' => 4500,
+            'peternak_id' => $eko->user_id,
+            'farm_name' => 'Kandang Bantul Timur',
+            'location' => 'Jl. Parangtritis Km 8, Bantul, Yogyakarta',
+            'initial_population' => 3000,
             'initial_weight' => 0.042,
             'farm_area' => 850,
-            'created_at' => now()->subMonths(6),
+            'created_at' => now()->subMonths(9),
             'updated_at' => now()
         ]);
 
         $farm3 = Farm::create([
-            'owner_id' => $agus->user_id,
-            'peternak_id' => $bambang->user_id,
-            'farm_name' => 'Kandang Ayam Kulon Progo - Wates',
-            'location' => 'Kulon Progo - Wates',
-            'initial_population' => 5500,
+            'owner_id' => $siti->user_id,
+            'peternak_id' => $dian->user_id,
+            'farm_name' => 'Kandang Godean Barat',
+            'location' => 'Jl. Godean Km 5, Sleman, Yogyakarta',
+            'initial_population' => 4000,
             'initial_weight' => 0.048,
-            'farm_area' => 1200,
-            'created_at' => now()->subMonths(6),
+            'farm_area' => 950,
+            'created_at' => now()->subMonths(8),
             'updated_at' => now()
         ]);
 
-        $farms = [$farm1, $farm2, $farm3];
+        // BAMBANG's FARMS (3 farms)
+        $farm4 = Farm::create([
+            'owner_id' => $bambangOwner->user_id,
+            'peternak_id' => $wahyu->user_id,
+            'farm_name' => 'Kandang Wonosari Selatan',
+            'location' => 'Jl. Wonosari Km 7, Gunungkidul, Yogyakarta',
+            'initial_population' => 5500,
+            'initial_weight' => 0.043,
+            'farm_area' => 1200,
+            'created_at' => now()->subMonths(11),
+            'updated_at' => now()
+        ]);
 
-        // Create Farm Configs with thresholds that will generate varied statuses
+        $farm5 = Farm::create([
+            'owner_id' => $bambangOwner->user_id,
+            'peternak_id' => $sri->user_id,
+            'farm_name' => 'Kandang Wates Tengah',
+            'location' => 'Jl. Wates Km 10, Kulon Progo, Yogyakarta',
+            'initial_population' => 4500,
+            'initial_weight' => 0.046,
+            'farm_area' => 1100,
+            'created_at' => now()->subMonths(11),
+            'updated_at' => now()
+        ]);
+
+        $farm6 = Farm::create([
+            'owner_id' => $bambangOwner->user_id,
+            'peternak_id' => $fitri->user_id,
+            'farm_name' => 'Kandang Solo Timur',
+            'location' => 'Jl. Solo Km 15, Sleman, Yogyakarta',
+            'initial_population' => 6000,
+            'initial_weight' => 0.044,
+            'farm_area' => 1300,
+            'created_at' => now()->subMonths(10),
+            'updated_at' => now()
+        ]);
+
+        $farms = [$farm1, $farm2, $farm3, $farm4, $farm5, $farm6];
+
+        // ==========================================
+        // 6. CREATE FARM CONFIGS
+        // ==========================================
+        $this->command->info('Creating farm configurations...');
+
         foreach ($farms as $farm) {
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'suhu_normal_min',
-                'value' => 28
-            ]);
+            $configs = [
+                'suhu_normal_min' => 28,
+                'suhu_normal_max' => 32,
+                'suhu_kritis_rendah' => 25,
+                'suhu_kritis_tinggi' => 35,
+                'kelembapan_normal_min' => 50,
+                'kelembapan_normal_max' => 70,
+                'kelembapan_kritis_rendah' => 40,
+                'kelembapan_kritis_tinggi' => 80,
+                'amonia_max' => 20,
+                'amonia_kritis' => 30
+            ];
 
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'suhu_normal_max',
-                'value' => 32
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'suhu_kritis_rendah',
-                'value' => 24
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'suhu_kritis_tinggi',
-                'value' => 36
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'kelembapan_normal_min',
-                'value' => 50
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'kelembapan_normal_max',
-                'value' => 70
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'kelembapan_kritis_rendah',
-                'value' => 40
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'kelembapan_kritis_tinggi',
-                'value' => 80
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'amonia_max',
-                'value' => 20
-            ]);
-
-            FarmConfig::create([
-                'farm_id' => $farm->farm_id,
-                'parameter_name' => 'amonia_kritis',
-                'value' => 30
-            ]);
+            foreach ($configs as $param => $value) {
+                FarmConfig::create([
+                    'farm_id' => $farm->farm_id,
+                    'parameter_name' => $param,
+                    'value' => $value
+                ]);
+            }
         }
 
-        // Seed IoT Data: 6 months + 15 days buffer, every 10 minutes
-        $this->command->info('Generating IoT data (6 months + 15 days, every 10 minutes)...');
+        // ==========================================
+        // 7. SEED IOT DATA (6 months, every 10 minutes)
+        // ==========================================
+        $this->command->info('Generating IoT data (6 months, every 10 minutes)...');
 
         $startDate = now()->subMonths(6)->subDays(15);
         $endDate = now();
         $totalMinutes = $startDate->diffInMinutes($endDate);
-        $dataPointsPerFarm = (int) ($totalMinutes / 10); // Every 10 minutes
+        $dataPointsPerFarm = (int) ($totalMinutes / 10);
 
         $this->command->info("Total data points per farm: {$dataPointsPerFarm}");
 
         foreach ($farms as $farmIndex => $farm) {
-            $this->command->info("Generating IoT data for farm {$farm->farm_id}...");
+            $this->command->info("Generating IoT data for farm {$farm->farm_id} ({$farm->farm_name})...");
             $batchSize = 500;
             $batch = [];
 
             for ($i = 0; $i < $dataPointsPerFarm; $i++) {
                 $timestamp = $startDate->copy()->addMinutes($i * 10);
-
                 $hour = $timestamp->hour;
                 $isDay = $hour >= 6 && $hour <= 18;
 
@@ -248,23 +331,21 @@ class DatabaseSeeder extends Seeder
                 $baseHumidity = $isDay ? rand(55, 65) : rand(65, 75);
                 $baseAmmonia = rand(8, 15);
 
-                // Add noise and occasional outliers to generate varied statuses
+                // Add noise and occasional outliers
                 $temp = $baseTemp + rand(-3, 3);
                 $humidity = $baseHumidity + rand(-8, 8);
                 $ammonia = $baseAmmonia + rand(-4, 4);
 
-                // Occasionally generate outliers (10% chance) for Waspada/Bahaya
+                // 10% chance for warning conditions
                 if (rand(1, 100) <= 10) {
                     if (rand(0, 1)) {
-                        // Temperature outlier
                         $temp = rand(0, 1) ? rand(24, 27) : rand(33, 35);
                     } else {
-                        // Ammonia outlier
                         $ammonia = rand(18, 25);
                     }
                 }
 
-                // Very rare critical outliers (2% chance) for Bahaya
+                // 2% chance for critical conditions
                 if (rand(1, 100) <= 2) {
                     $temp = rand(0, 1) ? rand(20, 23) : rand(37, 39);
                     $ammonia = rand(28, 35);
@@ -294,13 +375,15 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('IoT data created: ' . IotData::count() . ' records');
 
-        // Seed Manual Data: 6 months + 15 days, daily reports
-        $this->command->info('Generating Manual data (daily for 6 months + 15 days)...');
+        // ==========================================
+        // 8. SEED MANUAL DATA (6 months, daily)
+        // ==========================================
+        $this->command->info('Generating Manual data (daily for 6 months)...');
 
         $totalDays = (int) $startDate->diffInDays($endDate);
 
         foreach ($farms as $farm) {
-            // Only generate manual data if farm has peternak
+            // Only generate if peternak assigned
             if (!$farm->peternak_id) {
                 continue;
             }
@@ -310,18 +393,18 @@ class DatabaseSeeder extends Seeder
                 $dayInCycle = $day % 35; // 35-day broiler cycle
 
                 // Progressive weight gain
-                $initialWeight = 0.040; // 40g
-                $targetWeight = 1.900;  // 1900g at day 35
+                $initialWeight = 0.040;
+                $targetWeight = 1.900;
                 $growthPerDay = ($targetWeight - $initialWeight) / 35;
                 $expectedWeight = $initialWeight + ($growthPerDay * $dayInCycle);
                 $actualWeight = $expectedWeight + (rand(-20, 20) / 1000);
 
-                // Feed consumption increases with age (6-8% of body weight for flock)
-                $avgBirds = 5000 - ($dayInCycle * 3); // Slight mortality
+                // Feed consumption
+                $avgBirds = $farm->initial_population - ($dayInCycle * 3);
                 $feedPerBird = $actualWeight * 0.07;
                 $totalFeed = $feedPerBird * $avgBirds;
 
-                // Water consumption 1.8-2x feed
+                // Water consumption
                 $waterMultiplier = 1.8 + (rand(0, 20) / 100);
 
                 ManualData::create([
@@ -340,73 +423,55 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Manual data created: ' . ManualData::count() . ' records');
 
-        // Seed Request Logs (minimum 7 rows with realistic data)
+        // ==========================================
+        // 9. SEED REQUEST LOGS
+        // ==========================================
         $this->command->info('Generating Request Logs...');
-
-        $requestTypes = ['Tambah Kandang', 'Tambah Peternak'];
-        $statuses = ['pending', 'approved', 'rejected'];
 
         $requests = [
             [
                 'user_id' => $budi->user_id,
                 'sender_name' => 'Budi Santoso',
-                'phone_number' => '081298765432',
+                'phone_number' => '081298765001',
                 'request_type' => 'Tambah Kandang',
                 'request_content' => json_encode([
                     'farm_name' => 'Kandang Broiler Mlati',
                     'location' => 'Sleman - Mlati',
                     'population' => 6000,
                     'area' => 1200,
-                    'keterangan' => 'Mohon bantuan untuk penambahan kandang baru dengan kapasitas 6000 ekor'
+                    'keterangan' => 'Mohon bantuan untuk penambahan kandang baru'
                 ]),
                 'status' => 'approved',
                 'sent_time' => now()->subDays(45)
             ],
             [
                 'user_id' => $siti->user_id,
-                'sender_name' => 'Siti Rahayu',
-                'phone_number' => '081387654321',
+                'sender_name' => 'Siti Nurhaliza',
+                'phone_number' => '081298765002',
                 'request_type' => 'Tambah Peternak',
                 'request_content' => json_encode([
                     'nama_peternak' => 'Joko Widodo',
                     'email' => 'joko.widodo@example.com',
-                    'phone' => '081234567899',
-                    'keterangan' => 'Request penambahan peternak untuk Kandang Bantul'
+                    'phone' => '081234567899'
                 ]),
                 'status' => 'pending',
                 'sent_time' => now()->subDays(12)
             ],
             [
-                'user_id' => $agus->user_id,
-                'sender_name' => 'Agus Wijaya',
-                'phone_number' => '081276543210',
+                'user_id' => $bambangOwner->user_id,
+                'sender_name' => 'Bambang Setiawan',
+                'phone_number' => '081298765003',
                 'request_type' => 'Tambah Kandang',
                 'request_content' => json_encode([
                     'farm_name' => 'Kandang Layer Pengasih',
                     'location' => 'Kulon Progo - Pengasih',
-                    'population' => 4000,
-                    'area' => 800,
-                    'keterangan' => 'Penambahan kandang layer untuk diversifikasi usaha'
+                    'population' => 4000
                 ]),
                 'status' => 'rejected',
                 'sent_time' => now()->subDays(60)
             ],
             [
-                'user_id' => $budi->user_id,
-                'sender_name' => 'Budi Santoso',
-                'phone_number' => '081298765432',
-                'request_type' => 'Tambah Peternak',
-                'request_content' => json_encode([
-                    'nama_peternak' => 'Sri Wahyuni',
-                    'email' => 'sri.wahyuni@example.com',
-                    'phone' => '081345678901',
-                    'keterangan' => 'Butuh peternak tambahan untuk shift malam'
-                ]),
-                'status' => 'approved',
-                'sent_time' => now()->subDays(30)
-            ],
-            [
-                'user_id' => 0, // Guest request
+                'user_id' => 0,
                 'sender_name' => 'Dewi Kusuma',
                 'phone_number' => '081456789012',
                 'request_type' => 'Menunggu Detail Login',
@@ -416,66 +481,59 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'user_id' => $siti->user_id,
-                'sender_name' => 'Siti Rahayu',
-                'phone_number' => '081387654321',
+                'sender_name' => 'Siti Nurhaliza',
+                'phone_number' => '081298765002',
                 'request_type' => 'Tambah Kandang',
                 'request_content' => json_encode([
                     'farm_name' => 'Kandang Broiler Sewon',
                     'location' => 'Bantul - Sewon',
-                    'population' => 5500,
-                    'area' => 1100,
-                    'keterangan' => 'Ekspansi bisnis peternakan broiler di area Sewon'
+                    'population' => 5500
                 ]),
                 'status' => 'approved',
                 'sent_time' => now()->subDays(20)
             ],
-            [
-                'user_id' => 0, // Guest request
-                'sender_name' => 'Bambang Sutrisno',
-                'phone_number' => '081567890123',
-                'request_type' => 'Masalah Data',
-                'request_content' => 'bambang.sutrisno@yahoo.com',
-                'status' => 'rejected',
-                'sent_time' => now()->subDays(8)
-            ],
-            [
-                'user_id' => $agus->user_id,
-                'sender_name' => 'Agus Wijaya',
-                'phone_number' => '081276543210',
-                'request_type' => 'Tambah Peternak',
-                'request_content' => json_encode([
-                    'nama_peternak' => 'Tuti Wulandari',
-                    'email' => 'tuti.wulandari@example.com',
-                    'phone' => '081234567888',
-                    'keterangan' => 'Membutuhkan peternak berpengalaman untuk kandang baru'
-                ]),
-                'status' => 'pending',
-                'sent_time' => now()->subDays(3)
-            ],
         ];
 
         foreach ($requests as $request) {
-            RequestLog::create([
-                'user_id' => $request['user_id'],
-                'sender_name' => $request['sender_name'],
-                'phone_number' => $request['phone_number'],
-                'request_type' => $request['request_type'],
-                'request_content' => $request['request_content'],
-                'status' => $request['status'],
-                'sent_time' => $request['sent_time'],
-                'created_at' => $request['sent_time'],
-                'updated_at' => $request['sent_time']
-            ]);
+            RequestLog::create($request);
         }
 
         $this->command->info('Request logs created: ' . RequestLog::count() . ' records');
 
-        $this->command->info('Database seeding completed successfully!');
-        $this->command->info('Summary:');
-        $this->command->info('- Users: ' . User::count());
-        $this->command->info('- Farms: ' . Farm::count());
-        $this->command->info('- IoT Data: ' . IotData::count());
-        $this->command->info('- Manual Data: ' . ManualData::count());
-        $this->command->info('- Request Logs: ' . RequestLog::count());
+        // ==========================================
+        // 10. SUMMARY
+        // ==========================================
+        $this->command->info('');
+        $this->command->info('========================================');
+        $this->command->info('DATABASE SEEDING COMPLETED!');
+        $this->command->info('========================================');
+        $this->command->info('');
+        $this->command->info('📊 Summary:');
+        $this->command->info('  - Users: ' . User::count());
+        $this->command->info('  - Farms: ' . Farm::count());
+        $this->command->info('  - IoT Data: ' . IotData::count());
+        $this->command->info('  - Manual Data: ' . ManualData::count());
+        $this->command->info('  - Request Logs: ' . RequestLog::count());
+        $this->command->info('');
+        $this->command->info('🔐 Test Credentials (all passwords: "password"):');
+        $this->command->info('  Admin: admin');
+        $this->command->info('');
+        $this->command->info('  📍 Scenario 1 - Owner with 1 farm:');
+        $this->command->info('    Owner: budi.santoso → Kandang Sleman Utara → Peternak: Ahmad Fauzi');
+        $this->command->info('');
+        $this->command->info('  📍 Scenario 2 - Owner with 2 farms:');
+        $this->command->info('    Owner: siti.nurhaliza');
+        $this->command->info('      ├─ Kandang Bantul Timur → Peternak: Eko Prasetyo');
+        $this->command->info('      └─ Kandang Godean Barat → Peternak: Dian Wulandari');
+        $this->command->info('');
+        $this->command->info('  📍 Scenario 3 - Owner with 3 farms:');
+        $this->command->info('    Owner: bambang.setiawan');
+        $this->command->info('      ├─ Kandang Wonosari Selatan → Peternak: Wahyu Nugroho');
+        $this->command->info('      ├─ Kandang Wates Tengah → Peternak: Sri Mulyani');
+        $this->command->info('      └─ Kandang Solo Timur → Peternak: Fitri Handayani');
+        $this->command->info('');
+        $this->command->info('  ⚠️  Unassigned Peternak: rizky.ramadhan (for testing)');
+        $this->command->info('');
+        $this->command->info('========================================');
     }
 }

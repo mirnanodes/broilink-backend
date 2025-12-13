@@ -60,4 +60,36 @@ class User extends Authenticatable
     return $this->assignedFarm?->owner;
     }
 
+    /**
+     * Get all peternaks assigned to farms owned by this user (Owner role)
+     * Returns users where their assignedFarm's owner_id matches this user
+     */
+    public function peternaks()
+    {
+        return $this->hasManyThrough(
+            User::class,
+            Farm::class,
+            'owner_id',      // Foreign key on farms table (owner's farms)
+            'user_id',       // Foreign key on users table (peternak's user_id)
+            'user_id',       // Local key on this user (owner)
+            'peternak_id'    // Local key on farms table (assigned peternak)
+        )->whereNotNull('peternak_id');
+    }
+
+    /**
+     * Get the owner of this peternak via their assigned farm
+     * For Peternak role - returns the Owner who hired them
+     */
+    public function owner()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            Farm::class,
+            'peternak_id',   // Foreign key on farms table
+            'user_id',       // Foreign key on users table
+            'user_id',       // Local key on this user (peternak)
+            'owner_id'       // Local key on farms table
+        );
+    }
+
 }
