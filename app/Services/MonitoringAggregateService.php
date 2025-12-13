@@ -12,6 +12,10 @@ use LogicException;
  */
 class MonitoringAggregateService
 {
+    public function __construct(
+        private readonly FarmStatusService $statusService
+    ) {}
+
     /**
      * Aggregate IoT data for the given farm, date, and range
      */
@@ -67,7 +71,7 @@ class MonitoringAggregateService
             }
         }
 
-        return [
+        return $this->withOverview($farmId, [
             'labels' => $labels,
             'temperature' => $temperature,
             'humidity' => $humidity,
@@ -79,7 +83,7 @@ class MonitoringAggregateService
                 'end' => $end->toIso8601String(),
                 'source' => 'iot_data',
             ],
-        ];
+        ]);
     }
 
     /**
@@ -127,7 +131,7 @@ class MonitoringAggregateService
             $current->addDay();
         }
 
-        return [
+        return $this->withOverview($farmId, [
             'labels' => $labels,
             'temperature' => $temperature,
             'humidity' => $humidity,
@@ -139,7 +143,7 @@ class MonitoringAggregateService
                 'end' => $end->toIso8601String(),
                 'source' => 'iot_data',
             ],
-        ];
+        ]);
     }
 
     /**
@@ -181,7 +185,7 @@ class MonitoringAggregateService
             }
         }
 
-        return [
+        return $this->withOverview($farmId, [
             'labels' => $labels,
             'temperature' => $temperature,
             'humidity' => $humidity,
@@ -193,7 +197,7 @@ class MonitoringAggregateService
                 'end' => $end->toIso8601String(),
                 'source' => 'iot_data',
             ],
-        ];
+        ]);
     }
 
     /**
@@ -243,7 +247,7 @@ class MonitoringAggregateService
             $current->addMonth();
         }
 
-        return [
+        return $this->withOverview($farmId, [
             'labels' => $labels,
             'temperature' => $temperature,
             'humidity' => $humidity,
@@ -255,6 +259,33 @@ class MonitoringAggregateService
                 'end' => $end->toIso8601String(),
                 'source' => 'iot_data',
             ],
+        ]);
+    }
+
+    /**
+     * ✅ FIX: Add latest sensor overview (single value, not averaged)
+     * This ensures Dashboard and Monitoring show same temperature
+     */
+    private function withOverview(int $farmId, array $payload): array
+    {
+        // Get LATEST single sensor reading (not averaged)
+        $latest = \App\Models\IotData::where('farm_id', $farmId)
+            ->latest('timestamp')
+            ->first();
+
+        $config = DB::table('farm_config')
+            ->where('farm_id', $farmId)
+            ->pluck('value', 'parameter_name')
+            ->toArray();
+
+        $payload['overview'] = [
+            'status'      => $this->statusService->determine($latest, $config),
+            'temperature' => $latest?->temperature,
+            'humidity'    => $latest?->humidity,
+            'ammonia'     => $latest?->ammonia,
+            'timestamp'   => $latest?->timestamp,
         ];
+
+        return $payload;
     }
 }
