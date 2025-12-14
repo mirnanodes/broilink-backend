@@ -21,7 +21,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Aggregation endpoints
     Route::get('/monitoring/aggregate', MonitoringAggregateController::class);
     Route::get('/analysis/aggregate', ManualAnalysisAggregateController::class);
-    
+
 
     // ADMIN ROUTES
     Route::prefix('admin')->group(function () {
@@ -64,3 +64,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/otp/verify', [PeternakController::class, 'verifyOtp']);
     });
 });
+
+use App\Http\Controllers\SimulationController; // <--- Jangan lupa import ini di paling atas
+
+// Route khusus simulasi
+Route::post('/simulation/iot', [SimulationController::class, 'storeManualIot']);
