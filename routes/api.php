@@ -33,6 +33,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/users/{id}', [AdminController::class, 'deleteUser']);
         Route::get('/farms', [AdminController::class, 'getFarms']);
         Route::post('/farms', [AdminController::class, 'createFarm']);
+        Route::get('/farms/{id}', [AdminController::class, 'getFarmDetails']);
+        Route::put('/farms/{id}/assign-peternak', [AdminController::class, 'assignPeternak']);
+        Route::put('/farms/{id}/update-area', [AdminController::class, 'updateFarmArea']);
+        Route::put('/farms/{id}/update-population', [AdminController::class, 'updateFarmPopulation']);
         Route::get('/farms/{id}/config', [AdminController::class, 'getFarmConfig']);
         Route::put('/farms/{id}/config', [AdminController::class, 'updateFarmConfig']);
         Route::post('/farms/{id}/config/reset', [AdminController::class, 'resetFarmConfig']);

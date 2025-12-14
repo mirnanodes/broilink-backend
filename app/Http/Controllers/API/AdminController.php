@@ -134,10 +134,37 @@ class AdminController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'name' => 'required',
-            'phone_number' => 'nullable'
+            'phone_number' => 'nullable',
+            'farm_name' => 'nullable|string', // For Owner role - auto-create farm
+            'location' => 'nullable|string'   // Optional farm location
         ]);
 
         $user = User::create($validated);
+
+        // If creating an Owner (role_id = 2) and farm_name is provided, auto-create farm
+        if ($user->role_id == 2 && !empty($validated['farm_name'])) {
+            $farm = Farm::create([
+                'owner_id' => $user->user_id,
+                'farm_name' => $validated['farm_name'],
+                'location' => $validated['location'] ?? null,
+                'peternak_id' => null,
+                'initial_population' => null,
+                'initial_weight' => null,
+                'farm_area' => null
+            ]);
+
+            // Create default farm config for the new farm
+            $this->createDefaultConfig($farm->farm_id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Owner and farm created successfully',
+                'data' => [
+                    'user' => $user,
+                    'farm' => $farm
+                ]
+            ], 201);
+        }
 
         return response()->json([
             'success' => true,
@@ -169,26 +196,16 @@ class AdminController extends Controller
             'password' => 'sometimes|min:6',
             'name' => 'sometimes',
             'phone_number' => 'nullable',
-            'status' => 'sometimes|in:active,inactive',
-            'farm_id' => 'nullable|exists:farms,farm_id'
+            'status' => 'sometimes|in:active,inactive'
         ]);
 
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 
-        // Handle farm assignment for peternak
-        if (isset($validated['farm_id']) && $user->role_id == 3) {
-            // Remove peternak from old farm
-            Farm::where('peternak_id', $user->user_id)->update(['peternak_id' => null]);
-
-            // Assign peternak to new farm
-            if ($validated['farm_id']) {
-                Farm::where('farm_id', $validated['farm_id'])->update(['peternak_id' => $user->user_id]);
-            }
-
-            unset($validated['farm_id']); // Don't try to update users table with farm_id
-        }
+        // REMOVED: farm_id assignment for peternak
+        // Peternak assignment is now handled in Manajemen Kandang page
+        // via PUT /api/admin/farms/{id}/assign-peternak endpoint
 
         $user->update($validated);
 
@@ -643,5 +660,169 @@ class AdminController extends Controller
                 'value' => $value
             ]);
         }
+    }
+
+    /**
+     * Get single farm details (for Manajemen Kandang)
+     */
+    public function getFarmDetails($id)
+    {
+        $farm = Farm::with(['owner', 'peternak'])->find($id);
+
+        if (!$farm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Farm not found',
+                'data' => null
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'farm_id' => $farm->farm_id,
+                'farm_name' => $farm->farm_name,
+                'location' => $farm->location,
+                'farm_area' => $farm->farm_area,
+                'initial_population' => $farm->initial_population,
+                'owner_id' => $farm->owner_id,
+                'owner_name' => $farm->owner ? $farm->owner->name : null,
+                'peternak_id' => $farm->peternak_id,
+                'peternak_name' => $farm->peternak ? $farm->peternak->name : null
+            ]
+        ]);
+    }
+
+    /**
+     * Assign peternak to farm (for Manajemen Kandang)
+     */
+    public function assignPeternak(Request $request, $id)
+    {
+        $farm = Farm::find($id);
+
+        if (!$farm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Farm not found',
+                'data' => null
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'peternak_id' => 'required|exists:users,user_id'
+        ]);
+
+        $peternak = User::find($validated['peternak_id']);
+
+        // Validation 1: Peternak must be role_id = 3
+        if ($peternak->role_id != 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User is not a peternak'
+            ], 422);
+        }
+
+        // Validation 2: Check if peternak already assigned to another farm
+        $existingAssignment = Farm::where('peternak_id', $validated['peternak_id'])
+            ->where('farm_id', '!=', $id)
+            ->first();
+
+        if ($existingAssignment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Peternak sudah ditugaskan di kandang lain: ' . $existingAssignment->farm_name
+            ], 422);
+        }
+
+        // Validation 3: Peternak must belong to farm's owner
+        // Get all peternaks that belong to this farm's owner
+        $ownerPeternaks = User::where('role_id', 3)
+            ->whereHas('assignedFarm', function($q) use ($farm) {
+                $q->where('owner_id', $farm->owner_id);
+            })
+            ->orWhereDoesntHave('assignedFarm')
+            ->pluck('user_id')
+            ->toArray();
+
+        // For now, we'll allow any peternak without assignment
+        // You can enforce stricter validation if needed
+
+        // Assign peternak to farm
+        $farm->peternak_id = $validated['peternak_id'];
+        $farm->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Peternak assigned successfully',
+            'data' => [
+                'farm_id' => $farm->farm_id,
+                'peternak_id' => $farm->peternak_id,
+                'peternak_name' => $peternak->name
+            ]
+        ]);
+    }
+
+    /**
+     * Update farm area (for Manajemen Kandang)
+     */
+    public function updateFarmArea(Request $request, $id)
+    {
+        $farm = Farm::find($id);
+
+        if (!$farm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Farm not found',
+                'data' => null
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'farm_area' => 'required|numeric|min:1'
+        ]);
+
+        $farm->farm_area = $validated['farm_area'];
+        $farm->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Farm area updated successfully',
+            'data' => [
+                'farm_id' => $farm->farm_id,
+                'farm_area' => $farm->farm_area
+            ]
+        ]);
+    }
+
+    /**
+     * Update farm population (for Manajemen Kandang)
+     */
+    public function updateFarmPopulation(Request $request, $id)
+    {
+        $farm = Farm::find($id);
+
+        if (!$farm) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Farm not found',
+                'data' => null
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'initial_population' => 'required|integer|min:1'
+        ]);
+
+        $farm->initial_population = $validated['initial_population'];
+        $farm->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Farm population updated successfully',
+            'data' => [
+                'farm_id' => $farm->farm_id,
+                'initial_population' => $farm->initial_population
+            ]
+        ]);
     }
 }
