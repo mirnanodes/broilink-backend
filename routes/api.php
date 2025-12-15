@@ -51,6 +51,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // OWNER ROUTES
     Route::prefix('owner')->group(function () {
         Route::get('/dashboard', [OwnerController::class, 'dashboard']);
+        Route::get('/peternaks', [OwnerController::class, 'getPeternaks']);
         Route::get('/export/{farm_id}', [OwnerController::class, 'export']);
         Route::post('/requests', [OwnerController::class, 'submitRequest']);
         // REMOVED: /monitoring/{farm_id} and /analytics/{farm_id}

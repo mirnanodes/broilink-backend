@@ -7,6 +7,7 @@ use App\Models\Farm;
 use App\Models\IotData;
 use App\Models\ManualData;
 use App\Models\RequestLog;
+use App\Models\User;
 use App\Services\FarmStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -146,6 +147,34 @@ class OwnerController extends Controller
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
+    }
+
+    /**
+     * Get peternaks assigned to owner's farms
+     */
+    public function getPeternaks(Request $request)
+    {
+        $owner = $request->user();
+
+        // Get all peternaks assigned to farms owned by this owner
+        $peternaks = User::where('role_id', 3)
+            ->whereHas('assignedFarm', function($q) use ($owner) {
+                $q->where('owner_id', $owner->user_id);
+            })
+            ->get()
+            ->map(function($u) {
+                return [
+                    'user_id' => $u->user_id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'phone_number' => $u->phone_number
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $peternaks
+        ]);
     }
 
     /**
