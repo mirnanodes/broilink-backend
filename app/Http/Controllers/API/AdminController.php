@@ -87,15 +87,25 @@ class AdminController extends Controller
     {
         $user = User::with('role')->where('user_id', $id)->firstOrFail();
 
-        // If peternak, get owner info
         $owner_name = null;
         $owner_id = null;
         $farm_id = null;
 
         if ($user->role_id == 3) { // Peternak
+            // First check direct owner_id relationship
+            if ($user->owner_id) {
+                $directOwner = User::find($user->owner_id);
+                if ($directOwner) {
+                    $owner_id = $directOwner->user_id;
+                    $owner_name = $directOwner->name;
+                }
+            }
+
+            // Also check farm assignment
             $farm = Farm::with('owner')->where('peternak_id', $user->user_id)->first();
             if ($farm) {
                 $farm_id = $farm->farm_id;
+                // If owner from farm differs from direct owner, prioritize farm's owner
                 if ($farm->owner) {
                     $owner_id = $farm->owner->user_id;
                     $owner_name = $farm->owner->name;
@@ -113,8 +123,8 @@ class AdminController extends Controller
                 'phone_number' => $user->phone_number,
                 'role_id' => $user->role_id,
                 'role' => $user->role ? $user->role->name : null,
-                'farm_id' => $farm_id,
                 'owner_id' => $owner_id,
+                'farm_id' => $farm_id,
                 'owner_name' => $owner_name,
                 'status' => $user->status,
                 'date_joined' => $user->date_joined,
@@ -129,15 +139,27 @@ class AdminController extends Controller
     public function createUser(Request $request)
     {
         $validated = $request->validate([
-            'role_id' => 'required|exists:roles,role_id', // roles table primary key is 'role_id'
+            'role_id' => 'required|exists:roles,role_id',
             'username' => 'required|unique:users,username',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'name' => 'required',
             'phone_number' => 'nullable',
+            'owner_id' => 'nullable|exists:users,user_id', // For peternak
             'farm_name' => 'nullable|string', // For Owner role - auto-create farm
             'location' => 'nullable|string'   // Optional farm location
         ]);
+
+        // If creating peternak (role_id = 3), validate owner_id is actually an owner
+        if ($validated['role_id'] == 3 && !empty($validated['owner_id'])) {
+            $owner = User::find($validated['owner_id']);
+            if (!$owner || $owner->role_id != 2) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Owner ID tidak valid'
+                ], 422);
+            }
+        }
 
         $user = User::create($validated);
 
@@ -605,16 +627,21 @@ class AdminController extends Controller
      */
     public function getPeternaks($owner_id)
     {
+        // Get all peternaks that belong to this owner (via owner_id column)
         $peternaks = User::where('role_id', 3)
-            ->whereHas('assignedFarm', function($q) use ($owner_id) {
-                $q->where('owner_id', $owner_id);
-            })
+            ->where('owner_id', $owner_id)
             ->get()
             ->map(function($u) {
+                $farm = $u->assignedFarm;
+                
                 return [
                     'user_id' => $u->user_id,
                     'name' => $u->name,
-                    'email' => $u->email
+                    'email' => $u->email,
+                    'phone_number' => $u->phone_number,
+                    'farm_id' => $farm?->farm_id,
+                    'farm_name' => $farm?->farm_name,
+                    'is_assigned' => $farm !== null
                 ];
             });
 

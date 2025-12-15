@@ -133,6 +133,23 @@ class PeternakController extends Controller
         $user = $request->user();
         $farm = $user->assignedFarm?->load('owner');
 
+        // Get owner - prioritize farm's owner, fallback to directOwner
+        $owner = null;
+        if ($farm && $farm->owner) {
+            $owner = [
+                'owner_id'   => $farm->owner->user_id,
+                'owner_name' => $farm->owner->name
+            ];
+        } elseif ($user->owner_id) {
+            $directOwner = $user->directOwner;
+            if ($directOwner) {
+                $owner = [
+                    'owner_id'   => $directOwner->user_id,
+                    'owner_name' => $directOwner->name
+                ];
+            }
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -150,10 +167,7 @@ class PeternakController extends Controller
                     'farm_id'   => $farm->farm_id,
                     'farm_name' => $farm->farm_name
                 ] : null,
-                'owner' => $farm && $farm->owner ? [
-                    'owner_id'   => $farm->owner->user_id,
-                    'owner_name' => $farm->owner->name
-                ] : null,
+                'owner' => $owner,
                 'meta' => [
                     'date_joined' => $user->date_joined,
                     'last_login'  => $user->last_login

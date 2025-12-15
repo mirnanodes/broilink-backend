@@ -15,6 +15,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'role_id',
+        'owner_id',
         'username',
         'email',
         'password',
@@ -43,6 +44,24 @@ class User extends Authenticatable
     {
         // Foreign key 'role_id' in users table references 'role_id' in roles table
         return $this->belongsTo(Role::class, 'role_id', 'role_id');
+    }
+
+    /**
+     * Get the owner of this peternak (direct relationship via owner_id)
+     * Used when peternak is not yet assigned to a farm
+     */
+    public function directOwner()
+    {
+        return $this->belongsTo(User::class, 'owner_id', 'user_id');
+    }
+
+    /**
+     * Get all peternaks directly owned by this owner (via owner_id column)
+     * This works even if peternak is not assigned to a farm yet
+     */
+    public function ownedPeternaks()
+    {
+        return $this->hasMany(User::class, 'owner_id', 'user_id');
     }
 
     public function farms()

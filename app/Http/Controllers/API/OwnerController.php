@@ -156,18 +156,22 @@ class OwnerController extends Controller
     {
         $owner = $request->user();
 
-        // Get all peternaks assigned to farms owned by this owner
+        // Get all peternaks that belong to this owner (via owner_id column)
         $peternaks = User::where('role_id', 3)
-            ->whereHas('assignedFarm', function($q) use ($owner) {
-                $q->where('owner_id', $owner->user_id);
-            })
+            ->where('owner_id', $owner->user_id)
             ->get()
             ->map(function($u) {
+                // Check if peternak is assigned to a farm
+                $farm = $u->assignedFarm;
+                
                 return [
                     'user_id' => $u->user_id,
                     'name' => $u->name,
                     'email' => $u->email,
-                    'phone_number' => $u->phone_number
+                    'phone_number' => $u->phone_number,
+                    'farm_id' => $farm?->farm_id,
+                    'farm_name' => $farm?->farm_name,
+                    'is_assigned' => $farm !== null
                 ];
             });
 
