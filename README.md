@@ -1,505 +1,366 @@
-# BroiLink Backend API
+# BroiLink Backend
 
-## Overview
-
-BroiLink Backend is a Laravel 12-based REST API that powers an IoT-enabled farm management system for poultry operations. The system supports real-time environmental monitoring through IoT sensors and manual daily reporting by farm workers (Peternaks).
-
-### Key Responsibilities
-- User authentication and role-based authorization (Admin, Owner, Peternak)
-- Farm and farm configuration management
-- IoT sensor data ingestion and aggregation
-- Manual daily report collection and analysis
-- Real-time Telegram notifications for farm alerts
-- Data export and analytics endpoints
-
-### Technology Stack
-- **Framework:** Laravel 12
-- **PHP Version:** ^8.2
-- **Database:** MySQL
-- **Authentication:** Laravel Sanctum (Token-based)
-- **Key Dependencies:**
-  - Laravel Sanctum ^4.2 (API authentication)
-  - Laravel Tinker ^2.10 (REPL)
-  - Carbon (Date/time handling)
+Backend API untuk sistem monitoring kandang ayam broiler berbasis IoT. Dibangun pakai Laravel 12.
 
 ---
 
-## Requirements
+## Apa Aja Isinya?
 
-- PHP 8.2 or higher
-- Composer 2.x
-- MySQL 5.7+ or MariaDB 10.3+
-- Node.js 18+ and npm (for frontend assets, if applicable)
-
----
-
-## Installation & Setup
-
-### 1. Clone and Install Dependencies
-
-```bash
-# Navigate to backend directory
-cd be-broilink-m
-
-# Install PHP dependencies
-composer install
-```
-
-### 2. Environment Configuration
-
-```bash
-# Copy example environment file
-cp .env.example .env
-
-# Generate application key
-php artisan key:generate
-```
-
-Edit `.env` and configure your database credentials:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=broilink_db
-DB_USERNAME=root
-DB_PASSWORD=your_password
-```
-
-**Important:** Set your Telegram bot token if using notifications:
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-```
-
-### 3. Database Setup
-
-```bash
-# Run migrations
-php artisan migrate
-
-# Seed database with default data (roles, users, farms)
-php artisan db:seed
-
-# Or run both in one command
-php artisan migrate:fresh --seed
-```
-
-**Default Test Users** (all passwords: `password`):
-- **Admin:** `admin` / `password`
-- **Owner:** `budi.santoso` / `password`
-- **Peternak:** `ahmad.fauzi` / `password`
-
-See `database/seeders/DatabaseSeeder.php` for complete list of seeded users.
-
-### 4. Start Development Server
-
-```bash
-# Option 1: Start Laravel development server only
-php artisan serve
-# Backend will run on http://localhost:8000
-
-# Option 2: Start full stack (backend + queue + logs + frontend)
-composer dev
-```
+Ini backend REST API yang handle:
+- Login/logout user (pakai Sanctum token)
+- CRUD user dan farm buat admin
+- Dashboard monitoring buat owner dan peternak
+- Terima data sensor IoT (suhu, kelembaban, amonia)
+- Input data manual (pakan, air, kematian, bobot)
+- Notifikasi alert via Telegram bot
+- Export laporan
 
 ---
 
-## Project Structure
+## Tech Stack
+
+- PHP 8.2+
+- Laravel 12
+- MySQL
+- Laravel Sanctum (auth token)
+- Telegram Bot API (notifikasi)
+
+---
+
+## Dependencies
+
+**Production (composer.json)**
+- `laravel/framework` - Framework utama
+- `laravel/sanctum` - API token authentication
+- `laravel/tinker` - REPL untuk debugging
+
+**Development**
+- `fakerphp/faker` - Generate fake data untuk seeding
+- `laravel/pint` - Code formatter
+- `laravel/sail` - Docker environment
+- `phpunit/phpunit` - Testing
+
+---
+
+## Struktur Folder
 
 ```
 be-broilink-m/
 ├── app/
-│   ├── DataTransferObjects/    # DTOs for type-safe data transfer
-│   │   └── AggregateRequestDto.php
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   └── API/            # API Controllers organized by role
-│   │   │       ├── AuthController.php
-│   │   │       ├── AdminController.php
-│   │   │       ├── OwnerController.php
-│   │   │       ├── PeternakController.php
-│   │   │       ├── MonitoringAggregateController.php
-│   │   │       └── ManualAnalysisAggregateController.php
-│   │   └── Requests/           # Form Request validation classes
-│   │       └── AggregateRequest.php
-│   ├── Models/                 # Eloquent models
+│   ├── Console/Commands/     # Artisan commands (FarmAlert.php buat bot)
+│   ├── Http/Controllers/
+│   │   ├── API/              # Semua controller API
+│   │   │   ├── AuthController.php
+│   │   │   ├── AdminController.php
+│   │   │   ├── OwnerController.php
+│   │   │   ├── PeternakController.php
+│   │   │   ├── MonitoringAggregateController.php
+│   │   │   └── ManualAnalysisAggregateController.php
+│   │   └── SimulationController.php
+│   ├── Models/               # Eloquent models
 │   │   ├── User.php
 │   │   ├── Role.php
 │   │   ├── Farm.php
-│   │   ├── FarmConfig.php      # EAV pattern for farm parameters
+│   │   ├── FarmConfig.php
 │   │   ├── IotData.php
-│   │   ├── ManualData.php
-│   │   └── RequestLog.php
-│   ├── Providers/              # Service providers
-│   │   └── AppServiceProvider.php
-│   ├── Services/               # Business logic layer
-│   │   ├── TelegramService.php
-│   │   ├── FarmStatusService.php
-│   │   ├── MonitoringAggregateService.php
-│   │   └── ManualAnalysisAggregateService.php
-│   └── Support/                # Helper classes
-│       └── MonitoringLabelHelper.php
-├── bootstrap/                  # Framework bootstrap files
-├── config/                     # Configuration files
+│   │   └── ManualData.php
+│   └── Services/             # Business logic
+│       ├── FarmStatusService.php
+│       ├── MonitoringAggregateService.php
+│       └── ManualAnalysisAggregateService.php
 ├── database/
-│   ├── factories/              # Model factories
-│   ├── migrations/             # Database migrations (16 tables)
-│   └── seeders/                # Database seeders
-│       └── DatabaseSeeder.php  # Main seeder with test data
-├── public/                     # Web server document root
-├── resources/                  # Views, raw assets
+│   ├── migrations/           # Struktur tabel
+│   └── seeders/              # Data dummy
 ├── routes/
-│   ├── api.php                 # API routes (primary)
-│   ├── web.php                 # Web routes (minimal)
-│   └── console.php             # Console commands
-├── storage/                    # Logs, cache, uploads
-├── tests/
-│   ├── Feature/                # Feature tests
-│   └── Unit/                   # Unit tests
-├── .env.example                # Environment template
-├── artisan                     # Artisan CLI entry point
-├── composer.json               # PHP dependencies
-└── phpunit.xml                 # PHPUnit configuration
+│   └── api.php               # Semua route API
+└── config/                   # Konfigurasi Laravel
 ```
 
 ---
 
-## API Architecture
+## Database & Relasi
 
-### Authentication
-
-The API uses **Laravel Sanctum** for token-based authentication.
-
-**Login Flow:**
-1. Client sends credentials to `POST /api/login`
-2. Server validates and returns bearer token
-3. Client includes token in subsequent requests: `Authorization: Bearer {token}`
-
-**Public Endpoints:**
-- `POST /api/login` - User authentication
-- `POST /api/forgot-password` - Password reset
-- `POST /api/guest-report` - Guest request submission
-
-**Protected Endpoints:**
-All other endpoints require `auth:sanctum` middleware.
-
-### Route Organization
-
-Routes are organized by user role in `routes/api.php`:
+**Tabel utama:**
 
 ```
-/api/login                      [PUBLIC]
-/api/logout                     [Protected]
+roles
+├── role_id (PK)
+├── name (admin/owner/peternak)
+└── description
 
-/api/admin/*                    [Admin Role]
-  ├── /dashboard
-  ├── /users                    (CRUD)
-  ├── /farms                    (CRUD)
-  ├── /farms/{id}/config        (Farm configuration)
-  ├── /farms/{id}/iot/upload    (CSV upload)
-  ├── /requests                 (Request management)
-  └── /broadcast                (Telegram notifications)
+users
+├── user_id (PK)
+├── role_id (FK → roles)
+├── username, email, password
+├── name, phone_number, profile_pic
+├── status, date_joined, last_login
 
-/api/owner/*                    [Owner Role]
-  ├── /dashboard
-  └── /export/{farm_id}         (CSV export)
+farms
+├── farm_id (PK)
+├── owner_id (FK → users)      # siapa yang punya
+├── peternak_id (FK → users)   # siapa yang jaga (nullable)
+├── farm_name, location
+├── initial_population, initial_weight, farm_area
 
-/api/peternak/*                 [Peternak Role]
-  ├── /dashboard
-  ├── /reports                  (Submit daily reports)
-  ├── /profile                  (Profile management)
-  └── /otp/*                    (OTP verification)
+farm_config
+├── config_id (PK)
+├── farm_id (FK → farms)
+├── parameter_name (suhu_min, suhu_max, dll)
+├── value
 
-/api/monitoring/aggregate       [All Authenticated]
-/api/analysis/aggregate         [All Authenticated]
+iot_data
+├── id (PK)
+├── farm_id (FK → farms)
+├── timestamp
+├── temperature, humidity, ammonia
+├── data_source (sensor/simulation)
+
+manual_data
+├── id (PK)
+├── farm_id (FK → farms)
+├── user_id_input (FK → users)  # siapa yang input
+├── report_date
+├── konsumsi_pakan, konsumsi_air
+├── rata_rata_bobot, jumlah_kematian
 ```
 
-### Response Format
+**Relasi singkat:**
+- 1 Role → banyak User
+- 1 User (owner) → banyak Farm
+- 1 Farm → 1 User (peternak)
+- 1 Farm → banyak IotData
+- 1 Farm → banyak ManualData
+- 1 Farm → banyak FarmConfig
 
-All API responses follow a consistent JSON structure:
+---
 
-```json
+## Quick Start
+
+```bash
+# 1. Clone repo
+git clone https://github.com/mirnanodes/broilink-backend.git
+cd broilink-backend
+
+# 2. Install dependencies
+composer install
+
+# 3. Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# 4. Setting database di .env
+# DB_DATABASE=broilink
+# DB_USERNAME=root
+# DB_PASSWORD=
+
+# 5. Migrate & seed
+php artisan migrate --seed
+
+# 6. Jalankan
+php artisan serve
+```
+
+Server jalan di `http://localhost:8000`
+
+---
+
+## Test Account
+
+Semua password: `password`
+
+- Admin: `admin@broilink.com`
+- Owner: `owner@broilink.com`
+- Peternak: `peternak@broilink.com`
+
+---
+
+## Role & Fitur
+
+**Admin**
+- Lihat semua user & farm
+- CRUD user (owner & peternak)
+- CRUD farm
+- Assign peternak ke farm
+- Setting config farm (threshold sensor)
+- Upload data IoT via CSV
+- Handle request dari owner
+
+**Owner**
+- Dashboard monitoring semua farm miliknya
+- Lihat data sensor & manual per farm
+- Export laporan
+- Submit request ke admin
+
+**Peternak**
+- Dashboard monitoring farm yang di-assign
+- Input data harian (pakan, air, kematian, bobot)
+- Lihat riwayat input
+- Update profile
+
+---
+
+## API Endpoints
+
+### Auth
+```
+POST /api/login              # Login, dapat token
+POST /api/logout             # Logout (perlu token)
+POST /api/forgot-password    # Reset password
+```
+
+### Admin
+```
+GET    /api/admin/dashboard
+GET    /api/admin/users
+POST   /api/admin/users
+GET    /api/admin/users/{id}
+PUT    /api/admin/users/{id}
+DELETE /api/admin/users/{id}
+
+GET    /api/admin/farms
+POST   /api/admin/farms
+GET    /api/admin/farms/{id}
+PUT    /api/admin/farms/{id}/assign-peternak
+PUT    /api/admin/farms/{id}/update-area
+PUT    /api/admin/farms/{id}/update-population
+GET    /api/admin/farms/{id}/config
+PUT    /api/admin/farms/{id}/config
+POST   /api/admin/farms/{id}/config/reset
+POST   /api/admin/farms/{id}/iot/upload
+
+GET    /api/admin/owners
+GET    /api/admin/owners/{owner_id}/farms
+GET    /api/admin/peternaks/{owner_id}
+
+GET    /api/admin/requests
+PUT    /api/admin/requests/{id}/status
+```
+
+### Owner
+```
+GET  /api/owner/dashboard
+GET  /api/owner/export/{farm_id}
+POST /api/owner/requests
+```
+
+### Peternak
+```
+GET  /api/peternak/dashboard
+POST /api/peternak/reports
+GET  /api/peternak/profile
+PUT  /api/peternak/profile
+POST /api/peternak/profile/photo
+POST /api/peternak/otp/send
+POST /api/peternak/otp/verify
+```
+
+### Monitoring & Analysis (Agregasi)
+```
+GET /api/monitoring/aggregate    # Data sensor agregat
+GET /api/analysis/aggregate      # Data manual agregat
+```
+
+### Simulation
+```
+POST /api/simulation/iot         # Input data IoT manual (tanpa hardware)
+```
+
+---
+
+## Telegram Bot
+
+Bot untuk kirim notifikasi alert kalau sensor abnormal.
+
+**Setup:**
+1. Buat bot di @BotFather, dapat token
+2. Tambah di `.env`:
+   ```
+   TELEGRAM_BOT_TOKEN=your_bot_token
+   ```
+3. Jalankan bot:
+   ```bash
+   php artisan farm:run-bot
+   ```
+
+Bot bakal polling terus dan kirim alert kalau ada data sensor yang lewat threshold.
+
+---
+
+## Simulation Endpoint
+
+Buat testing tanpa hardware IoT. Kirim data sensor manual:
+
+```
+POST /api/simulation/iot
+Content-Type: application/json
+
 {
-  "success": true|false,
-  "message": "Optional message",
-  "data": { ... }
+  "farm_id": 1,
+  "temperature": 32.5,
+  "humidity": 65,
+  "ammonia": 15
 }
 ```
 
-Error responses include appropriate HTTP status codes (400, 401, 404, 422, 500).
-
----
-
-## Database Schema
-
-The system uses **16 tables** organized as follows:
-
-### Core Tables
-- `roles` - User roles (Admin, Owner, Peternak)
-- `users` - System users with role relationships
-- `farms` - Farm information (owner_id, peternak_id)
-- `farm_config` - EAV pattern for farm configuration parameters
-
-### Data Tables
-- `iot_data` - Real-time sensor readings (temperature, humidity, ammonia)
-- `manual_data` - Daily manual reports (feed, water, weight, mortality)
-- `request_log` - User requests to admin
-- `notification_log` - Telegram notification history
-
-### Laravel System Tables
-- `personal_access_tokens` - Sanctum authentication tokens
-- `cache`, `cache_locks` - Application cache
-- `jobs`, `job_batches`, `failed_jobs` - Queue system
-- `sessions` - Session management
-
-**Key Relationships:**
-- User `belongsTo` Role
-- User `hasMany` Farms (as owner)
-- User `hasOne` Farm (as peternak via assignedFarm)
-- Farm `belongsTo` User (owner)
-- Farm `belongsTo` User (peternak)
-- Farm `hasMany` FarmConfig (EAV pattern)
-- Farm `hasMany` IotData
-- Farm `hasMany` ManualData
-
----
-
-## Service Layer
-
-The application uses a service-oriented architecture for complex business logic:
-
-### TelegramService
-Handles Telegram bot notifications:
-- `sendMessage($chatId, $message)` - Send message to user
-- `broadcastMessage($chatIds, $message)` - Send to multiple users
-- `formatFarmAlert($farmName, $status, $sensorData)` - Format alert message
-- `formatAnnouncement($title, $message)` - Format broadcast message
-
-### FarmStatusService
-Determines farm environmental status:
-- `determine($latestIotData, $config)` - Returns 'normal', 'waspada', or 'bahaya'
-
-### MonitoringAggregateService
-Aggregates IoT sensor data across time ranges:
-- `aggregate($farmId, $date, $range)` - Main aggregation method
-- Supported ranges: `1_day`, `1_week`, `1_month`, `6_months`
-- Returns time-series data for temperature, humidity, ammonia
-
-### ManualAnalysisAggregateService
-Aggregates manual report data (feed, water, weight, mortality):
-- Similar structure to MonitoringAggregateService
-- Handles manual_data table aggregation
-
----
-
-## Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-composer test
-# OR
-php artisan test
-
-# Run specific test suite
-php artisan test --testsuite=Feature
-php artisan test --testsuite=Unit
-
-# Run with coverage (requires Xdebug)
-php artisan test --coverage
-```
-
-### Current Test Coverage
-
-**Note:** The project currently has minimal test coverage (only example tests). Comprehensive testing is recommended for production use.
-
----
-
-## Development Commands
-
-### Artisan Commands
-
-```bash
-# View all routes
-php artisan route:list
-
-# Clear caches
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-
-# Database
-php artisan migrate
-php artisan db:seed
-php artisan migrate:fresh --seed
-
-# Generate files
-php artisan make:model ModelName
-php artisan make:controller ControllerName
-php artisan make:migration migration_name
-php artisan make:seeder SeederName
-php artisan make:request RequestName
-
-# Queue management
-php artisan queue:work
-php artisan queue:listen
-```
-
-### Composer Scripts
-
-```bash
-# Full setup (install, migrate, seed)
-composer setup
-
-# Run development stack
-composer dev
-
-# Run tests
-composer test
+Response:
+```json
+{
+  "success": true,
+  "message": "Data IoT berhasil disimpan",
+  "data": {
+    "farm_id": 1,
+    "temperature": 32.5,
+    "humidity": 65,
+    "ammonia": 15,
+    "timestamp": "2025-01-15 10:30:00",
+    "data_source": "simulation"
+  }
+}
 ```
 
 ---
 
-## API Testing
+## Environment Variables
 
-### Using cURL
+Yang penting di `.env`:
 
-```bash
-# Login
-curl -X POST http://localhost:8000/api/login \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{"username":"admin","password":"password"}'
+```env
+APP_NAME=BroiLink
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-# Admin Dashboard (use token from login)
-curl -X GET http://localhost:8000/api/admin/dashboard \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=broilink
+DB_USERNAME=root
+DB_PASSWORD=
 
-### Using Postman
-
-See `POSTMAN_TESTING_GUIDE.md` (if available in parent directory) for complete step-by-step instructions.
-
----
-
-## Code Quality Standards
-
-This project follows Laravel and PSR coding standards:
-
-- **PSR-12** for code style
-- **Laravel Naming Conventions**
-  - Controllers: `PascalCase` + `Controller` suffix
-  - Models: `PascalCase` (singular)
-  - Migrations: `snake_case` with descriptive names
-  - Routes: `kebab-case` for URIs
-- **DocBlocks** on all public methods
-- **Type declarations** for method parameters and return types
-
-### Recommended Tools
-
-```bash
-# Laravel Pint (code formatting)
-./vendor/bin/pint
-
-# PHPStan (static analysis)
-composer require --dev phpstan/phpstan
-./vendor/bin/phpstan analyse
+TELEGRAM_BOT_TOKEN=your_bot_token_here
 ```
 
 ---
 
-## Security Considerations
+## Artisan Commands
 
-- All passwords are hashed using Laravel's `Hash` facade (bcrypt)
-- API routes protected with `auth:sanctum` middleware
-- CSRF protection enabled for web routes
-- SQL injection prevention via Eloquent ORM and query builder
-- Input validation using Form Requests and controller validation
-
-**Important:** Never commit `.env` file or expose sensitive credentials.
-
----
-
-## Deployment
-
-### Production Checklist
-
-1. Set environment to production:
-   ```env
-   APP_ENV=production
-   APP_DEBUG=false
-   ```
-
-2. Optimize configuration:
-   ```bash
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   composer install --optimize-autoloader --no-dev
-   ```
-
-3. Set appropriate permissions:
-   ```bash
-   chmod -R 755 storage bootstrap/cache
-   ```
-
-4. Configure web server (Apache/Nginx) to point to `public/` directory
-
-5. Set up queue worker as a system service:
-   ```bash
-   php artisan queue:work --daemon
-   ```
-
-6. Configure scheduled tasks (if any):
-   ```bash
-   * * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
-   ```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Failed:**
-- Verify `.env` database credentials
-- Ensure MySQL service is running
-- Test connection: `php artisan migrate:status`
-
-**Permission Denied on storage/:**
 ```bash
-chmod -R 775 storage bootstrap/cache
-```
-
-**Class Not Found:**
-```bash
-composer dump-autoload
-```
-
-**Migration Already Ran:**
-```bash
-php artisan migrate:fresh --seed  # WARNING: Drops all tables
+php artisan serve              # Jalankan server
+php artisan migrate            # Jalankan migration
+php artisan migrate:fresh --seed  # Reset DB + seed
+php artisan farm:run-bot       # Jalankan Telegram bot
+php artisan tinker             # REPL untuk debug
 ```
 
 ---
 
-## Contributing
+## Notes
 
-See `CONTRIBUTING.md` for backend development guidelines.
+- Semua endpoint kecuali login & simulation butuh token Bearer
+- Token didapat dari response login
+- Format: `Authorization: Bearer {token}`
+- Data IoT disini baru simulation endpoint
 
----
 
-## License
-
-This project is proprietary software developed for BroiLink.
-
----
-
-## Support
-
-For technical issues or questions:
-- Check Laravel documentation: https://laravel.com/docs/12.x
-- Review API routes: `php artisan route:list`
-- Check logs: `storage/logs/laravel.log`
+## PAD1 - Kelompok 1
+Smartfarm - Broilink
