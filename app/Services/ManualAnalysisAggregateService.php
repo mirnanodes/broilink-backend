@@ -35,40 +35,51 @@ class ManualAnalysisAggregateService
 
     /**
      * -------- 1 DAY (6 buckets, 4h each) --------
-     * ✅ FIXED: Query manual_data instead of iot_data
+     * Groups manual data by updated_at hour into 4-hour buckets
+     * Uses updated_at so that edited reports show in the correct time bucket
      */
     private function aggregateOneDay(int $farmId, Carbon $date): array
     {
         $start = $date->copy()->startOfDay();
         $end   = $date->copy()->endOfDay();
 
-        // ✅ FIX: Query manual_data table for peternak work data
-        $result = DB::table('manual_data')
+        // Query manual_data grouped by 4-hour buckets based on updated_at
+        // updated_at reflects when data was last modified (more accurate for "recent activity")
+        $results = DB::table('manual_data')
             ->selectRaw('
+                FLOOR(HOUR(updated_at) / 4) AS bucket,
                 SUM(konsumsi_pakan) AS total_feed,
                 SUM(konsumsi_air) AS total_water,
                 AVG(rata_rata_bobot) AS avg_weight,
                 SUM(jumlah_kematian) AS total_mortality
             ')
             ->where('farm_id', $farmId)
-            ->where('report_date', $date->toDateString())
-            ->first();
+            ->whereBetween('updated_at', [$start, $end])
+            ->groupBy('bucket')
+            ->orderBy('bucket')
+            ->get()
+            ->keyBy('bucket');
 
-        // For 1 day view, show hourly breakdown (6 buckets of 4h each)
-        // Since manual_data is daily, we replicate the same values across all buckets
-        $labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
+        // 6 buckets: 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+        $labels    = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
+        $feed      = [];
+        $water     = [];
+        $avgWeight = [];
+        $mortality = [];
 
-        $feedValue = $result?->total_feed ? round($result->total_feed, 2) : null;
-        $waterValue = $result?->total_water ? round($result->total_water, 2) : null;
-        $weightValue = $result?->avg_weight ? round($result->avg_weight, 2) : null;
-        $mortalityValue = $result?->total_mortality ? (int)$result->total_mortality : null;
+        for ($i = 0; $i < 6; $i++) {
+            $feed[]      = isset($results[$i]) ? round($results[$i]->total_feed, 2) : 0;
+            $water[]     = isset($results[$i]) ? round($results[$i]->total_water, 2) : 0;
+            $avgWeight[] = isset($results[$i]) ? round($results[$i]->avg_weight, 2) : 0;
+            $mortality[] = isset($results[$i]) ? (int)$results[$i]->total_mortality : 0;
+        }
 
         return $this->withOverview($farmId, [
             'labels'       => $labels,
-            'feed'         => array_fill(0, 6, $feedValue),
-            'water'        => array_fill(0, 6, $waterValue),
-            'avg_weight'   => array_fill(0, 6, $weightValue),
-            'mortality'    => array_fill(0, 6, $mortalityValue),
+            'feed'         => $feed,
+            'water'        => $water,
+            'avg_weight'   => $avgWeight,
+            'mortality'    => $mortality,
             'meta' => [
                 'range'   => '1_day',
                 'farm_id' => $farmId,

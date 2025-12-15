@@ -54,8 +54,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/peternaks', [OwnerController::class, 'getPeternaks']);
         Route::get('/export/{farm_id}', [OwnerController::class, 'export']);
         Route::post('/requests', [OwnerController::class, 'submitRequest']);
-        // REMOVED: /monitoring/{farm_id} and /analytics/{farm_id}
-        // Use aggregate endpoints instead: /monitoring/aggregate and /analysis/aggregate
     });
 
     // PETERNAK ROUTES

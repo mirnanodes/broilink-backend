@@ -76,9 +76,10 @@ class DatabaseSeeder extends Seeder
         // ==========================================
         $this->command->info('Creating 3 Peternaks...');
 
-        // Peternak buat Budi
+        // Peternak buat Budi (owner_id = budi)
         $ahmad = User::create([
             'role_id' => $peternakRole->role_id,
+            'owner_id' => $budi->user_id, // Link langsung ke owner
             'username' => 'ahmad.fauzi',
             'email' => 'ahmad.fauzi@broilink.com',
             'password' => Hash::make('password'),
@@ -87,9 +88,10 @@ class DatabaseSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        // Peternak 1 buat Siti
+        // Peternak 1 buat Siti (owner_id = siti)
         $eko = User::create([
             'role_id' => $peternakRole->role_id,
+            'owner_id' => $siti->user_id, // Link langsung ke owner
             'username' => 'eko.prasetyo',
             'email' => 'eko.prasetyo@broilink.com',
             'password' => Hash::make('password'),
@@ -98,9 +100,10 @@ class DatabaseSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        // Peternak 2 buat Siti
+        // Peternak 2 buat Siti (owner_id = siti)
         $dian = User::create([
             'role_id' => $peternakRole->role_id,
+            'owner_id' => $siti->user_id, // Link langsung ke owner
             'username' => 'dian.wulandari',
             'email' => 'dian.wulandari@broilink.com',
             'password' => Hash::make('password'),
@@ -166,13 +169,13 @@ class DatabaseSeeder extends Seeder
         }
 
         // ==========================================
-        // 7. SEED IOT DATA (DIET VERSION: 2 BULAN SAJA)
+        // 7. SEED IOT DATA (DIET VERSION: 2 BULAN, EXCLUDE TODAY)
         // ==========================================
-        $this->command->info('Generating IoT data (Only last 2 months)...');
+        $this->command->info('Generating IoT data (Only last 2 months, excluding today)...');
 
-        // Setting waktu mundur 2 bulan
+        // Setting waktu mundur 2 bulan, end at YESTERDAY
         $startDate = now()->subMonths(2);
-        $endDate = now();
+        $endDate = now()->subDay()->endOfDay(); // Exclude today
         $totalMinutes = $startDate->diffInMinutes($endDate);
 
         // Data per 10 menit
@@ -215,11 +218,13 @@ class DatabaseSeeder extends Seeder
         }
 
         // ==========================================
-        // 8. MANUAL DATA (DIET VERSION: 2 BULAN)
+        // 8. MANUAL DATA (DIET VERSION: 2 BULAN, EXCLUDE TODAY)
         // ==========================================
-        $this->command->info('Generating Manual data (Daily for 2 months)...');
+        $this->command->info('Generating Manual data (Daily for 2 months, excluding today)...');
 
-        $totalDays = (int) $startDate->diffInDays($endDate);
+        // End at YESTERDAY, not today (so fresh input from user is clean)
+        $manualEndDate = now()->subDay()->endOfDay();
+        $totalDays = (int) $startDate->diffInDays($manualEndDate);
 
         foreach ($farms as $farm) {
             for ($day = 0; $day < $totalDays; $day++) {
@@ -227,6 +232,9 @@ class DatabaseSeeder extends Seeder
 
                 // Simulasi ayam tumbuh (makin hari makin berat)
                 $growth = 0.05 * ($day % 35); // Reset tiap 35 hari (panen)
+                
+                // Set timestamp for evening report (18:00)
+                $reportTime = $date->copy()->setHour(18)->setMinute(0)->setSecond(0);
 
                 ManualData::create([
                     'farm_id' => $farm->farm_id,
@@ -236,8 +244,8 @@ class DatabaseSeeder extends Seeder
                     'konsumsi_air' => rand(200, 500) + ($day * 3),
                     'rata_rata_bobot' => 0.04 + $growth, // kg
                     'jumlah_kematian' => rand(0, 3),
-                    'created_at' => $date->addHours(18), // Laporan sore
-                    'updated_at' => $date->addHours(18)
+                    'created_at' => $reportTime,
+                    'updated_at' => $reportTime
                 ]);
             }
         }
@@ -265,6 +273,6 @@ class DatabaseSeeder extends Seeder
             'sent_time' => now()->subDays(5)
         ]);
 
-        $this->command->info('✅ SEEDING SELESAI! (Diet Version)');
+        $this->command->info('Seeding completed successfully.');
     }
 }
