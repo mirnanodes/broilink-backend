@@ -62,10 +62,10 @@ class PeternakController extends Controller
             'labels'    => $manual->map(fn ($d) =>
                 Carbon::parse($d->report_date)->locale('id')->translatedFormat('D, d M')
             )->toArray(),
-            'pakan'     => $manual->pluck('konsumsi_pakan')->toArray(),
-            'minum'     => $manual->pluck('konsumsi_air')->toArray(),
-            'bobot'     => $manual->pluck('rata_rata_bobot')->toArray(),
-            'kematian'  => $manual->pluck('jumlah_kematian')->toArray(),
+            'pakan'     => $manual->map(fn ($d) => (int)round($d->konsumsi_pakan))->toArray(),
+            'minum'     => $manual->map(fn ($d) => (int)round($d->konsumsi_air))->toArray(),
+            'bobot'     => $manual->map(fn ($d) => (int)round($d->rata_rata_bobot))->toArray(),
+            'kematian'  => $manual->map(fn ($d) => (int)$d->jumlah_kematian)->toArray(),
         ];
 
         return response()->json([

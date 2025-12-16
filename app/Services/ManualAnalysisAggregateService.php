@@ -68,9 +68,9 @@ class ManualAnalysisAggregateService
         $mortality = [];
 
         for ($i = 0; $i < 6; $i++) {
-            $feed[]      = isset($results[$i]) ? round($results[$i]->total_feed, 2) : 0;
-            $water[]     = isset($results[$i]) ? round($results[$i]->total_water, 2) : 0;
-            $avgWeight[] = isset($results[$i]) ? round($results[$i]->avg_weight, 2) : 0;
+            $feed[]      = isset($results[$i]) ? (int)round($results[$i]->total_feed) : 0;
+            $water[]     = isset($results[$i]) ? (int)round($results[$i]->total_water) : 0;
+            $avgWeight[] = isset($results[$i]) ? (int)round($results[$i]->avg_weight) : 0;
             $mortality[] = isset($results[$i]) ? (int)$results[$i]->total_mortality : 0;
         }
 
@@ -125,9 +125,9 @@ class ManualAnalysisAggregateService
             $key = $current->toDateString();
 
             $labels[]    = MonitoringLabelHelper::weekdayNameId($current);
-            $feed[]      = isset($results[$key]) ? round($results[$key]->total_feed, 2) : null;
-            $water[]     = isset($results[$key]) ? round($results[$key]->total_water, 2) : null;
-            $avgWeight[] = isset($results[$key]) ? round($results[$key]->avg_weight, 2) : null;
+            $feed[]      = isset($results[$key]) ? (int)round($results[$key]->total_feed) : null;
+            $water[]     = isset($results[$key]) ? (int)round($results[$key]->total_water) : null;
+            $avgWeight[] = isset($results[$key]) ? (int)round($results[$key]->avg_weight) : null;
             $mortality[] = isset($results[$key]) ? (int)$results[$key]->total_mortality : null;
 
             $current->addDay();
@@ -180,9 +180,9 @@ class ManualAnalysisAggregateService
         $mortality = [];
 
         for ($i = 1; $i <= 4; $i++) {
-            $feed[]      = isset($results[$i]) ? round($results[$i]->total_feed, 2) : null;
-            $water[]     = isset($results[$i]) ? round($results[$i]->total_water, 2) : null;
-            $avgWeight[] = isset($results[$i]) ? round($results[$i]->avg_weight, 2) : null;
+            $feed[]      = isset($results[$i]) ? (int)round($results[$i]->total_feed) : null;
+            $water[]     = isset($results[$i]) ? (int)round($results[$i]->total_water) : null;
+            $avgWeight[] = isset($results[$i]) ? (int)round($results[$i]->avg_weight) : null;
             $mortality[] = isset($results[$i]) ? (int)$results[$i]->total_mortality : null;
         }
 
@@ -239,9 +239,9 @@ class ManualAnalysisAggregateService
             $key = "{$current->year}-{$current->month}";
 
             $labels[]    = MonitoringLabelHelper::monthAbbrevId($current->month);
-            $feed[]      = isset($results[$key]) ? round($results[$key]->total_feed, 2) : null;
-            $water[]     = isset($results[$key]) ? round($results[$key]->total_water, 2) : null;
-            $avgWeight[] = isset($results[$key]) ? round($results[$key]->avg_weight, 2) : null;
+            $feed[]      = isset($results[$key]) ? (int)round($results[$key]->total_feed) : null;
+            $water[]     = isset($results[$key]) ? (int)round($results[$key]->total_water) : null;
+            $avgWeight[] = isset($results[$key]) ? (int)round($results[$key]->avg_weight) : null;
             $mortality[] = isset($results[$key]) ? (int)$results[$key]->total_mortality : null;
 
             $current->addMonth();

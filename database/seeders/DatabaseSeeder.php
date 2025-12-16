@@ -230,8 +230,11 @@ class DatabaseSeeder extends Seeder
             for ($day = 0; $day < $totalDays; $day++) {
                 $date = $startDate->copy()->addDays($day);
 
-                // Simulasi ayam tumbuh (makin hari makin berat)
-                $growth = 0.05 * ($day % 35); // Reset tiap 35 hari (panen)
+                // Simulasi ayam tumbuh (makin hari makin berat dalam gram)
+                $dayInCycle = $day % 35; // Reset tiap 35 hari (panen)
+                $baseWeight = 40; // 40 gram DOC
+                $growthPerDay = 50; // +50 gram per hari
+                $bobot = $baseWeight + ($dayInCycle * $growthPerDay); // dalam gram
                 
                 // Set timestamp for evening report (18:00)
                 $reportTime = $date->copy()->setHour(18)->setMinute(0)->setSecond(0);
@@ -240,9 +243,9 @@ class DatabaseSeeder extends Seeder
                     'farm_id' => $farm->farm_id,
                     'user_id_input' => $farm->peternak_id,
                     'report_date' => $date->toDateString(),
-                    'konsumsi_pakan' => rand(100, 300) + ($day * 2),
-                    'konsumsi_air' => rand(200, 500) + ($day * 3),
-                    'rata_rata_bobot' => 0.04 + $growth, // kg
+                    'konsumsi_pakan' => rand(100, 300) + ($dayInCycle * 2),
+                    'konsumsi_air' => rand(200, 500) + ($dayInCycle * 3),
+                    'rata_rata_bobot' => $bobot, // dalam gram
                     'jumlah_kematian' => rand(0, 3),
                     'created_at' => $reportTime,
                     'updated_at' => $reportTime

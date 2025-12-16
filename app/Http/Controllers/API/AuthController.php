@@ -88,8 +88,13 @@ class AuthController extends Controller
             'user_id' => $user->user_id,
             'sender_name' => $user->name,
             'phone_number' => $user->phone_number,
-            'request_type' => $user->role ? $user->role->name : 'User',
-            'request_content' => "Nomor WhatsApp: {$user->phone_number}\nDetail Permintaan: Lupa Password",
+            'request_type' => 'Lupa Password',
+            'request_content' => json_encode([
+                'email' => $validated['email'],
+                'phone_number' => $user->phone_number,
+                'role' => $user->role ? $user->role->name : 'User',
+                'detail_permintaan' => 'Lupa Password'
+            ]),
             'status' => 'pending',
             'sent_time' => now()
         ]);
