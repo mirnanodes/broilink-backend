@@ -128,7 +128,7 @@ class FarmAlert extends Command
         // Hapus tiket agar tidak bisa dipakai ulang (Security)
         Cache::forget('tele_connect_' . $token);
 
-        $this->sendMessage($chatId, "✅ **BERHASIL TERHUBUNG!**\n\nHalo {$user->name}, akun Telegram ini telah sukses terhubung ke sistem Broilink.\n\nAnda sekarang akan menerima:\n- Kode OTP Login\n- Peringatan Bahaya Kandang Otomatis\n\nKetik `/cekiot` untuk melihat konfigurasi kandang.");
+        $this->sendMessage($chatId, "✅ **BERHASIL TERHUBUNG!**\n\nHalo {$user->name}, akun Telegram ini telah sukses terhubung ke sistem Broilink\n\nKetik `/cekiot` untuk melihat konfigurasi kandang.");
     }
 
     /**
