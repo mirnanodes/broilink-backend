@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http; // <--- WAJIB ADA
+use Illuminate\Support\Str;          // <--- WAJIB ADA
 use Carbon\Carbon;
 
 class PeternakController extends Controller
@@ -24,8 +26,6 @@ class PeternakController extends Controller
     public function dashboard(Request $request)
     {
         $user = $request->user();
-
-        // SINGLE SOURCE OF TRUTH
         $farm = $user->assignedFarm;
 
         if (!$farm) {
@@ -35,7 +35,6 @@ class PeternakController extends Controller
             ], 409);
         }
 
-        // Latest IoT data
         $latest = IotData::where('farm_id', $farm->farm_id)
             ->latest('timestamp')
             ->first();
@@ -49,7 +48,6 @@ class PeternakController extends Controller
             'status'      => $this->statusService->determine($latest, $config)
         ];
 
-        // Manual data summary - last 7 days
         $manual = ManualData::where('farm_id', $farm->farm_id)
             ->whereBetween('report_date', [
                 now()->subDays(6)->toDateString(),
@@ -71,10 +69,7 @@ class PeternakController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'farm' => [
-                    'id'   => $farm->farm_id,
-                    'name' => $farm->farm_name
-                ],
+                'farm' => ['id' => $farm->farm_id, 'name' => $farm->farm_name],
                 'current' => $current,
                 'summary' => $summary
             ]
@@ -90,10 +85,7 @@ class PeternakController extends Controller
         $farm = $user->assignedFarm;
 
         if (!$farm) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Peternak belum ditugaskan ke kandang'
-            ], 409);
+            return response()->json(['success' => false, 'message' => 'Peternak belum ditugaskan'], 409);
         }
 
         $validated = $request->validate([
@@ -105,10 +97,7 @@ class PeternakController extends Controller
         ]);
 
         $report = ManualData::updateOrCreate(
-            [
-                'farm_id'     => $farm->farm_id,
-                'report_date' => $validated['report_date']
-            ],
+            ['farm_id' => $farm->farm_id, 'report_date' => $validated['report_date']],
             [
                 'user_id_input'     => $user->user_id,
                 'konsumsi_pakan'    => $validated['konsumsi_pakan'],
@@ -118,11 +107,7 @@ class PeternakController extends Controller
             ]
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Laporan harian berhasil disimpan',
-            'data'    => $report
-        ], 201);
+        return response()->json(['success' => true, 'message' => 'Laporan harian berhasil disimpan', 'data' => $report], 201);
     }
 
     /**
@@ -133,20 +118,13 @@ class PeternakController extends Controller
         $user = $request->user();
         $farm = $user->assignedFarm?->load('owner');
 
-        // Get owner - prioritize farm's owner, fallback to directOwner
         $owner = null;
         if ($farm && $farm->owner) {
-            $owner = [
-                'owner_id'   => $farm->owner->user_id,
-                'owner_name' => $farm->owner->name
-            ];
+            $owner = ['owner_id' => $farm->owner->user_id, 'owner_name' => $farm->owner->name];
         } elseif ($user->owner_id) {
             $directOwner = $user->directOwner;
             if ($directOwner) {
-                $owner = [
-                    'owner_id'   => $directOwner->user_id,
-                    'owner_name' => $directOwner->name
-                ];
+                $owner = ['owner_id' => $directOwner->user_id, 'owner_name' => $directOwner->name];
             }
         }
 
@@ -159,121 +137,130 @@ class PeternakController extends Controller
                     'name'         => $user->name,
                     'email'        => $user->email,
                     'phone_number' => $user->phone_number,
-                    'profile_pic'  => $user->profile_pic
-                        ? Storage::url($user->profile_pic)
-                        : null,
+                    'profile_pic'  => $user->profile_pic ? Storage::url($user->profile_pic) : null,
                 ],
-                'farm' => $farm ? [
-                    'farm_id'   => $farm->farm_id,
-                    'farm_name' => $farm->farm_name
-                ] : null,
+                'farm' => $farm ? ['farm_id' => $farm->farm_id, 'farm_name' => $farm->farm_name] : null,
                 'owner' => $owner,
-                'meta' => [
-                    'date_joined' => $user->date_joined,
-                    'last_login'  => $user->last_login
-                ]
             ]
         ]);
     }
 
-    /**
-     * Update peternak profile
-     */
     public function updateProfile(Request $request)
     {
         $user = $request->user();
-
         $validated = $request->validate([
             'name'          => 'sometimes|required|string',
             'email'         => 'sometimes|email|unique:users,email,' . $user->user_id . ',user_id',
             'phone_number'  => 'sometimes|nullable|string'
         ]);
-
         $user->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Profil berhasil diperbarui',
-            'data'    => $user
-        ]);
+        return response()->json(['success' => true, 'message' => 'Profil berhasil diperbarui', 'data' => $user]);
     }
 
-    /**
-     * Upload profile photo
-     */
     public function uploadPhoto(Request $request)
     {
         $user = $request->user();
-
-        $validated = $request->validate([
-            'photo' => 'required|image|max:2048'
-        ]);
+        $request->validate(['photo' => 'required|image|max:2048']);
 
         if ($user->profile_pic) {
             Storage::delete($user->profile_pic);
         }
 
         $path = $request->file('photo')->store('public/profiles');
-
         $user->update(['profile_pic' => $path]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Foto profil berhasil diperbarui',
-            'data' => [
-                'profile_pic' => Storage::url($path)
-            ]
+            'message' => 'Foto profil diperbarui',
+            'data' => ['profile_pic' => Storage::url($path)]
+        ]);
+    }
+
+    // =========================================================================
+    // FITUR INTEGRASI TELEGRAM & OTP (TAMBAHAN BARU)
+    // =========================================================================
+
+    /**
+     * GENERATE LINK TELEGRAM (Deep Link)
+     * Frontend memanggil ini -> Dapat URL -> Redirect User ke URL tersebut
+     */
+    public function getTelegramLink(Request $request)
+    {
+        $user = $request->user();
+
+        // 1. Buat Token Unik (Tiket)
+        $token = Str::random(32);
+
+        // 2. Simpan Tiket di Cache (Berlaku 5 menit)
+        Cache::put('tele_connect_' . $token, $user->user_id, 300);
+
+        // 3. Ambil Username Bot dari .env
+        $botUsername = env('TELEGRAM_BOT_USERNAME', 'Broilink_bot');
+
+        // 4. Return URL Lengkap
+        return response()->json([
+            'success' => true,
+            'url' => "https://t.me/$botUsername?start=$token",
+            'message' => 'Silakan buka link ini untuk menghubungkan akun.'
         ]);
     }
 
     /**
-     * Send OTP
+     * Send OTP (Kirim ke Telegram)
      */
     public function sendOtp(Request $request)
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'phone_number' => 'required'
-        ]);
+        // Cek apakah user sudah connect Telegram
+        $teleData = DB::table('user_telegram')->where('user_id', $user->user_id)->first();
 
-        $otp = rand(100000, 999999);
-
-        Cache::put('otp_' . $user->user_id, $otp, now()->addMinutes(5));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'OTP berhasil dikirim',
-            'otp' => $otp // REMOVE in production
-        ]);
-    }
-
-    /**
-     * Verify OTP
-     */
-    public function verifyOtp(Request $request)
-    {
-        $user = $request->user();
-
-        $validated = $request->validate([
-            'otp' => 'required|digits:6'
-        ]);
-
-        $cachedOtp = Cache::get('otp_' . $user->user_id);
-
-        if (!$cachedOtp || $cachedOtp != $validated['otp']) {
+        if (!$teleData) {
             return response()->json([
                 'success' => false,
-                'message' => 'OTP tidak valid atau kedaluwarsa'
+                'message' => 'Telegram belum terhubung. Silakan hubungkan akun terlebih dahulu.'
             ], 400);
         }
 
-        Cache::forget('otp_' . $user->user_id);
+        // Generate OTP
+        $otp = rand(100000, 999999);
+        Cache::put('otp_' . $user->user_id, $otp, now()->addMinutes(5));
+
+        // Kirim Pesan ke Telegram
+        try {
+            $token = env('TELEGRAM_BOT_TOKEN');
+            $pesan = "🔐 **KODE OTP MASUK**\n\n";
+            $pesan .= "Halo {$user->name}, kode OTP Anda adalah:\n";
+            $pesan .= "`{$otp}`\n\n";
+            $pesan .= "Jangan berikan kode ini ke siapapun.";
+
+            Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $teleData->telegram_chat_id,
+                'text' => $pesan,
+                'parse_mode' => 'Markdown'
+            ]);
+        } catch (\Exception $e) {
+            // Silent fail
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP berhasil diverifikasi'
+            'message' => 'OTP berhasil dikirim ke Telegram',
         ]);
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $user = $request->user();
+        $validated = $request->validate(['otp' => 'required|digits:6']);
+        $cachedOtp = Cache::get('otp_' . $user->user_id);
+
+        if (!$cachedOtp || $cachedOtp != $validated['otp']) {
+            return response()->json(['success' => false, 'message' => 'OTP tidak valid atau kedaluwarsa'], 400);
+        }
+
+        Cache::forget('otp_' . $user->user_id);
+        return response()->json(['success' => true, 'message' => 'OTP berhasil diverifikasi']);
     }
 
     /**

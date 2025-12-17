@@ -65,6 +65,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/profile/photo', [PeternakController::class, 'uploadPhoto']);
         Route::post('/otp/send', [PeternakController::class, 'sendOtp']);
         Route::post('/otp/verify', [PeternakController::class, 'verifyOtp']);
+        Route::get('/telegram-link', [PeternakController::class, 'getTelegramLink']);
     });
 });
 
