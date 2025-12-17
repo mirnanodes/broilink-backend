@@ -235,7 +235,7 @@ class DatabaseSeeder extends Seeder
                 $baseWeight = 40; // 40 gram DOC
                 $growthPerDay = 50; // +50 gram per hari
                 $bobot = $baseWeight + ($dayInCycle * $growthPerDay); // dalam gram
-                
+
                 // Set timestamp for evening report (18:00)
                 $reportTime = $date->copy()->setHour(18)->setMinute(0)->setSecond(0);
 
